@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STM32 Timer PWM Notebook</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="topbar" aria-label="Dieu huong chinh">
+      <a class="brand" href="#top">STM32 PWM Notes</a>
+      <div class="nav-links">
+        <a href="#timer">Timer</a>
+        <a href="#pwm">PWM</a>
+        <a href="#led">LED</a>
+        <a href="#motor">Motor</a>
+        <a href="#notes">Markdown</a>
+      </div>
+    </nav>
+
+    <section class="intro" id="top">
+      <div>
+        <p class="kicker">STM32F103C8T6 - TIM1_CH1 tren PA8</p>
+        <h1>Timer va PWM, nhin nhu xung tren oscilloscope.</h1>
+        <p class="intro-text">
+          So tay truc quan de hieu `PSC`, `ARR`, `CCR1/Pulse`, duty cycle,
+          LED dimming va dieu khien dong co DC qua L298N.
+        </p>
+      </div>
+      <aside class="hardware-card">
+        <h2>Cau hinh dang hoc</h2>
+        <dl>
+          <div><dt>Clock</dt><dd>72 MHz</dd></div>
+          <div><dt>PWM</dt><dd>PA8 / TIM1_CH1</dd></div>
+          <div><dt>PSC</dt><dd>71</dd></div>
+          <div><dt>ARR</dt><dd>99</dd></div>
+          <div><dt>Driver</dt><dd>L298N ENA</dd></div>
+        </dl>
+      </aside>
+    </section>
+  </header>
+
+  <main>
+    <section class="section section-timer" id="timer">
+      <div class="section-heading">
+        <p class="section-label">01 - Timer</p>
+        <h2>Timer la bo dem thoi gian.</h2>
+        <p>
+          Trong project nay, timer dem moi `1 us`. Khi dem tu `0` den `99`,
+          no tao ra mot vong dem dai `100 us`.
+        </p>
+      </div>
+
+      <div class="formula-grid">
+        <article class="formula-card">
+          <span>Buoc 1</span>
+          <h3>Chia clock bang PSC</h3>
+          <code>f_CNT = 72 MHz / (71 + 1) = 1 MHz</code>
+          <p>Counter tang 1,000,000 lan moi giay.</p>
+        </article>
+        <article class="formula-card">
+          <span>Buoc 2</span>
+          <h3>Tinh thoi gian 1 tick</h3>
+          <code>T_tick = 1 / 1 MHz = 1 us</code>
+          <p>Moi lan counter tang len 1 thi mat 1 micro giay.</p>
+        </article>
+        <article class="formula-card">
+          <span>Buoc 3</span>
+          <h3>ARR tao chu ky</h3>
+          <code>ARR = 99 -> 0..99 = 100 tick</code>
+          <p>Dem tu 0 den 99 la 100 gia tri vi dem bao gom ca 0.</p>
+        </article>
+      </div>
+
+      <div class="counter-strip" aria-label="Counter dem tu 0 den 99">
+        <span>0</span><span>1</span><span>2</span><span>3</span><span>...</span><span>98</span><span>99</span><span>reset ve 0</span>
+      </div>
+    </section>
+
+    <section class="section section-pwm" id="pwm">
+      <div class="section-heading">
+        <p class="section-label">02 - PWM</p>
+        <h2>PWM la bat/tat nhanh trong tung chu ky.</h2>
+        <p>
+          `ARR` tao khung thoi gian cua chu ky. `CCR1/Pulse` quyet dinh
+          phan HIGH nam trong khung do.
+        </p>
+      </div>
+
+      <div class="big-equation">
+        <div>
+          <strong>T_PWM</strong>
+          <code>(ARR + 1) x T_tick = 100 x 1 us = 100 us</code>
+        </div>
+        <div>
+          <strong>f_PWM</strong>
+          <code>1 / 100 us = 10,000 Hz = 10 kHz</code>
+        </div>
+      </div>
+
+      <div class="waveform-board" aria-label="So do xung PWM theo CCR1">
+        <article class="wave-card">
+          <div class="wave-meta">
+            <h3>CCR1 = 0</h3>
+            <p>Duty 0% - luon LOW</p>
+          </div>
+          <div class="scope">
+            <div class="scope-labels"><span>HIGH</span><span>LOW</span></div>
+            <div class="wave wave-0"><span class="low-line"></span></div>
+          </div>
+          <p class="timing">HIGH 0 us, LOW 100 us</p>
+        </article>
+
+        <article class="wave-card">
+          <div class="wave-meta">
+            <h3>CCR1 = 25</h3>
+            <p>Duty gan 25%</p>
+          </div>
+          <div class="scope">
+            <div class="scope-labels"><span>HIGH</span><span>LOW</span></div>
+            <div class="wave wave-25"><span class="high"></span><span class="low-line"></span><span class="marker">25us</span></div>
+          </div>
+          <p class="timing">HIGH 25 us, LOW 75 us</p>
+        </article>
+
+        <article class="wave-card featured">
+          <div class="wave-meta">
+            <h3>CCR1 = 50</h3>
+            <p>Duty gan 50%</p>
+          </div>
+          <div class="scope">
+            <div class="scope-labels"><span>HIGH</span><span>LOW</span></div>
+            <div class="wave wave-50"><span class="high"></span><span class="low-line"></span><span class="marker">50us</span></div>
+          </div>
+          <p class="timing">HIGH 50 us, LOW 50 us</p>
+        </article>
+
+        <article class="wave-card">
+          <div class="wave-meta">
+            <h3>CCR1 = 75</h3>
+            <p>Duty gan 75%</p>
+          </div>
+          <div class="scope">
+            <div class="scope-labels"><span>HIGH</span><span>LOW</span></div>
+            <div class="wave wave-75"><span class="high"></span><span class="low-line"></span><span class="marker">75us</span></div>
+          </div>
+          <p class="timing">HIGH 75 us, LOW 25 us</p>
+        </article>
+
+        <article class="wave-card">
+          <div class="wave-meta">
+            <h3>CCR1 = 99</h3>
+            <p>Duty gan 99%</p>
+          </div>
+          <div class="scope">
+            <div class="scope-labels"><span>HIGH</span><span>LOW</span></div>
+            <div class="wave wave-99"><span class="high"></span><span class="low-line"></span><span class="marker">99us</span></div>
+          </div>
+          <p class="timing">HIGH gan 99 us, LOW gan 1 us</p>
+        </article>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ARR</th>
+              <th>CCR1/Pulse</th>
+              <th>Duty gan dung</th>
+              <th>HIGH time</th>
+              <th>LOW time</th>
+              <th>Cam nhan</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>99</td><td>0</td><td>0%</td><td>0 us</td><td>100 us</td><td>Tat</td></tr>
+            <tr><td>99</td><td>25</td><td>25%</td><td>25 us</td><td>75 us</td><td>Yeu/mo</td></tr>
+            <tr><td>99</td><td>50</td><td>50%</td><td>50 us</td><td>50 us</td><td>Trung binh</td></tr>
+            <tr><td>99</td><td>75</td><td>75%</td><td>75 us</td><td>25 us</td><td>Manh/sang</td></tr>
+            <tr><td>99</td><td>99</td><td>99%</td><td>99 us</td><td>1 us</td><td>Gan toi da</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section section-led" id="led">
+      <div class="section-heading">
+        <p class="section-label">03 - LED</p>
+        <h2>LED nhin thay do sang trung binh.</h2>
+        <p>
+          Chan PWM van chi HIGH hoac LOW. Nhung vi `10 kHz` qua nhanh voi mat nguoi,
+          LED trong nhu dang co nhieu muc sang.
+        </p>
+      </div>
+
+      <div class="comparison">
+        <article>
+          <h3>Duty thap</h3>
+          <p>`CCR1 = 25`: LED duoc cap dien 25% thoi gian, nen nhin mo.</p>
+        </article>
+        <article>
+          <h3>Duty cao</h3>
+          <p>`CCR1 = 75`: LED duoc cap dien 75% thoi gian, nen nhin sang hon.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section section-motor" id="motor">
+      <div class="section-heading">
+        <p class="section-label">04 - Motor DC</p>
+        <h2>Motor cam nhan nang luong trung binh.</h2>
+        <p>
+          `PA8 PWM -> L298N ENA`. Khi PA8 HIGH, ENA bat va motor duoc cap nang luong.
+          Khi PA8 LOW, ENA tat trong khoang rat ngan.
+        </p>
+      </div>
+
+      <div class="motor-grid">
+        <article class="connection-card">
+          <h3>Ket noi dieu khien</h3>
+          <ul>
+            <li><strong>PA8</strong> -> TIM1_CH1 PWM -> L298N ENA</li>
+            <li><strong>PB12</strong> -> IN1</li>
+            <li><strong>PB13</strong> -> IN2</li>
+            <li><strong>12 V ngoai</strong> -> motor supply cua L298N</li>
+          </ul>
+        </article>
+        <article class="connection-card accent">
+          <h3>Huong quay</h3>
+          <table>
+            <tbody>
+              <tr><th>IN1</th><th>IN2</th><th>Hanh vi</th></tr>
+              <tr><td>1</td><td>0</td><td>Quay mot chieu</td></tr>
+              <tr><td>0</td><td>1</td><td>Quay chieu nguoc</td></tr>
+              <tr><td>0</td><td>0</td><td>Coast/stop</td></tr>
+              <tr><td>1</td><td>1</td><td>Brake, tuy module</td></tr>
+            </tbody>
+          </table>
+        </article>
+      </div>
+
+      <aside class="safety-note">
+        <strong>Luu y an toan:</strong>
+        Khong cap nguon motor tu Blue Pill. Motor dung nguon ngoai 12 V, va STM32 GND phai noi chung voi L298N GND.
+      </aside>
+    </section>
+
+    <section class="section section-confusion">
+      <div class="section-heading">
+        <p class="section-label">Can nho</p>
+        <h2>Nhung cho de nham.</h2>
+      </div>
+      <div class="mistake-grid">
+        <article>
+          <h3>`ARR = 99` khong phai 10,000 count</h3>
+          <p>`ARR = 99` nghia la dem `0..99`, tong cong 100 tick trong mot chu ky PWM.</p>
+        </article>
+        <article>
+          <h3>`10 kHz` la so chu ky moi giay</h3>
+          <p>Vi mot chu ky dai `100 us`, nen moi giay co 10,000 chu ky PWM.</p>
+        </article>
+        <article>
+          <h3>`CCR1` khong doi tan so PWM</h3>
+          <p>`CCR1` chi doi thoi gian HIGH, tuc duty cycle. `ARR` moi la thu dinh do dai chu ky.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section section-notes" id="notes">
+      <div class="section-heading">
+        <p class="section-label">Markdown source</p>
+        <h2>Doc tiep bang file note.</h2>
+      </div>
+      <div class="note-links">
+        <a href="notes/01-timer.md">01 - Timer</a>
+        <a href="notes/02-pwm.md">02 - PWM</a>
+        <a href="notes/03-led-control.md">03 - LED</a>
+        <a href="notes/04-dc-motor-control.md">04 - Motor DC</a>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
