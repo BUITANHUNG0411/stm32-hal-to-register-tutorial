@@ -24,6 +24,7 @@
         <a href="#adc"><span>04</span><b>ADC throttle</b></a>
         <a href="#l298n"><span>05</span><b>L298N</b></a>
         <a href="#firmware-modules"><span>06</span><b>HAL modules</b></a>
+        <a href="#project-views"><span>06A</span><b>Tree & flows</b></a>
 
         <p class="toc-label">Tra cứu nhanh</p>
         <a href="#reference"><span>R1</span><b>Pin & công thức</b></a>
@@ -82,7 +83,7 @@
         <div class="quick-grid">
           <article><span class="state state-done">ĐÃ CÓ</span><strong>Timer / PWM / ADC</strong><small>Đã cấu hình và hiểu luồng cơ bản.</small></article>
           <article><span class="state state-done">ĐÃ CÓ</span><strong>HAL modules</strong><small>adc_reader, motor_pwm, motor_driver, app_motor_control.</small></article>
-          <article><span class="state state-now">ĐANG LÀM</span><strong>Test motor</strong><small>Build, flash, direction và duty thấp.</small></article>
+          <article><span class="state state-done">THEO README</span><strong>Manual hardware test</strong><small>Potentiometer đã được ghi nhận làm đổi tốc độ motor; repo chưa có artefact test.</small></article>
           <article><span class="state state-later">HỌC SAU</span><strong>Encoder feedback</strong><small>TIM3, tốc độ và closed-loop.</small></article>
         </div>
       </section>
@@ -93,8 +94,8 @@
           <p>Một checkpoint nhỏ trước khi mở rộng đồ án.</p>
         </div>
         <div class="task-strip">
-          <strong>Test open-loop an toàn</strong>
-          <span>Chọn `MOTOR_DRIVER_FORWARD` → đặt chiết áp nhỏ nhất → build/flash → tăng duty từ từ.</span>
+          <strong>Thu thập evidence cho portfolio</strong>
+          <span>Lưu ảnh wiring/board; ảnh hoặc video motor ở ga thấp, giữa, cao; PWM capture nếu có oscilloscope/logic analyzer; và bảng quan sát direction/duty.</span>
           <span class="task-rule">Chung GND. Nguồn motor từ nguồn ngoài. Không cấp motor từ Blue Pill.</span>
         </div>
       </section>
@@ -156,6 +157,17 @@
         <div class="section-heading"><div><span class="section-index">06</span><h2>HAL Modules</h2></div><p>Mỗi module có một trách nhiệm; `main.c` chỉ khởi động và gọi app update.</p></div>
         <table class="data-table module-table"><thead><tr><th>Module</th><th>Public responsibility</th><th>Hardware</th></tr></thead><tbody><tr><td><code>adc_reader.h/.c</code></td><td>Đọc raw ADC và trả `0..4095`.</td><td>PA0 / ADC1_IN0</td></tr><tr><td><code>motor_pwm.h/.c</code></td><td>Start PWM, clamp và ghi Pulse/CCR1 `0..99`.</td><td>PA8 / TIM1_CH1</td></tr><tr><td><code>motor_driver.h/.c</code></td><td>Chọn Forward, Reverse, Stop, Brake.</td><td>PB12 / PB13</td></tr><tr><td><code>app_motor_control.h/.c</code></td><td>Nối ADC → mapping → PWM.</td><td>hadc1 / htim1</td></tr></tbody></table>
         <div class="two-column"><div class="lesson-block"><h3>HAL flow</h3><ol class="clean-list"><li>CubeMX cấu hình peripheral.</li><li>`MX_..._Init()` khởi tạo.</li><li>Gọi start cho peripheral cần chạy.</li><li>Đọc ADC và map giá trị.</li><li>Ghi Pulse vào CCR1.</li></ol></div><div class="lesson-block"><h3>`main.c` giữ mỏng</h3><p>Include module trong `USER CODE BEGIN Includes`. Gọi start/init trong `USER CODE BEGIN 2`. Trong vòng lặp, gọi `app_motor_control_update(&hadc1, &htim1)` trong `USER CODE BEGIN 3`.</p></div></div>
+      </section>
+
+      <section class="section" id="project-views">
+        <div class="section-heading"><div><span class="section-index">06A</span><h2>Project Tree &amp; Three Flows</h2></div><p>Cùng một project, nhưng mỗi sơ đồ trả lời một câu hỏi khác nhau.</p></div>
+        <table class="data-table module-table"><thead><tr><th>Góc nhìn</th><th>Câu hỏi trả lời</th><th>Ví dụ thật trong project</th></tr></thead><tbody>
+          <tr><td><strong>Project tree</strong></td><td>File nằm ở đâu, và file nào thuộc cùng nhóm?</td><td>`Core/Inc` chứa interface `.h`; `Core/Src` chứa implementation `.c`; `cmake/stm32cubemx/CMakeLists.txt` đưa các source vào build target.</td></tr>
+          <tr><td><strong>Runtime / module call flow</strong></td><td>Khi firmware chạy, hàm và module gọi nhau theo thứ tự nào?</td><td>`main.c` init peripheral, start PWM và đặt direction; vòng lặp gọi `app_motor_control_update()` → `adc_reader_read_raw()` → map ADC sang Pulse → `motor_pwm_set_pulse()`.</td></tr>
+          <tr><td><strong>Hardware signal flow</strong></td><td>Tín hiệu điều khiển đi qua các khối phần cứng nào?</td><td>Potentiometer → `PA0 / ADC1_IN0` → giá trị số được firmware map → `PA8 / TIM1_CH1` PWM → L298N `ENA` → GA37. `PB12/PB13` đi tới `IN1/IN2` để chọn direction.</td></tr>
+        </tbody></table>
+        <div class="two-column"><div class="lesson-block"><h3>Đừng trộn ba góc nhìn</h3><p>Tree không nói hàm nào gọi nhau. Call flow không cho thấy dây nào nối sang L298N. Hardware signal flow không thay thế danh sách file.</p></div><div class="lesson-block"><h3>Dùng trong portfolio sau này</h3><p>Muốn cho reviewer thấy cấu trúc source: dùng tree. Muốn giải thích chương trình hoạt động: dùng runtime flow. Muốn giải thích mạch điều khiển motor: dùng hardware signal flow.</p></div></div>
+        <div class="checkpoint"><b>Checkpoint</b><span>Chỉ khi em chỉ đúng loại sơ đồ cho từng câu hỏi, mình mới chuyển sang vẽ diagram và tổ chức README/case study.</span></div>
       </section>
 
       <section class="section reference-section" id="reference">
