@@ -3,415 +3,184 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sổ tay STM32 Motor Control</title>
+  <meta name="description" content="Sổ tay kỹ thuật STM32F103C8T6 cho project chiết áp, PWM, L298N và motor GA37.">
+  <title>STM32 Motor Workbook</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="notebook-shell">
-    <aside class="sidebar" aria-label="Mục lục sổ tay">
-      <a class="brand" href="#top">STM32 Motor Notebook</a>
-      <p class="sidebar-note">Bản đọc chính cho project chiết áp -> L298N -> GA37 encoder.</p>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Mục lục notebook">
+      <a class="brand" href="#dashboard">STM32 Motor Workbook</a>
+      <p class="sidebar-copy">Sổ tay học và tra cứu cho Blue Pill + GA37.</p>
 
       <nav class="toc">
-        <a href="#project-map"><span>00</span>Project Map</a>
-        <a href="#timer"><span>01</span>Timer Foundation</a>
-        <a href="#pwm"><span>02</span>PWM Output</a>
-        <a href="#adc"><span>03</span>Throttle ADC</a>
-        <a href="#l298n"><span>04</span>L298N Direction</a>
-        <a href="#later"><span>05</span>Later Topics</a>
-        <a href="#archive"><span>MD</span>Notes Archive</a>
+        <p class="toc-label">Bắt đầu</p>
+        <a href="#dashboard"><span>00</span><b>Dashboard</b></a>
+        <a href="#current-task"><span>01</span><b>Việc hiện tại</b></a>
+
+        <p class="toc-label">Học theo thứ tự</p>
+        <a href="#timer"><span>02</span><b>Timer</b></a>
+        <a href="#pwm"><span>03</span><b>PWM</b></a>
+        <a href="#adc"><span>04</span><b>ADC throttle</b></a>
+        <a href="#l298n"><span>05</span><b>L298N</b></a>
+        <a href="#firmware-modules"><span>06</span><b>HAL modules</b></a>
+
+        <p class="toc-label">Tra cứu nhanh</p>
+        <a href="#reference"><span>R1</span><b>Pin & công thức</b></a>
+        <a href="#build-flash"><span>R2</span><b>Build & flash</b></a>
+        <a href="#later"><span>R3</span><b>Học sau</b></a>
+        <a href="#archive"><span>MD</span><b>Markdown archive</b></a>
       </nav>
 
       <div class="sidebar-status">
-        <strong>Đang học</strong>
-        <span>ADC mapping sang `CCR1/Pulse`</span>
+        <span class="status-dot"></span>
+        <div>
+          <strong>Đang làm</strong>
+          <small>ADC → Pulse → PWM</small>
+        </div>
       </div>
     </aside>
 
-    <main class="notebook" id="top">
-      <header class="notebook-header">
-        <p class="eyebrow">STM32F103C8T6 Blue Pill - HAL learning notebook</p>
-        <h1>Automotive Motor Control & Actuator Node</h1>
-        <p>
-          Sổ tay này là nơi đọc chính. Các file Markdown trong `/notes` chỉ là nguồn phụ/archive;
-          kiến thức mới phải được đưa vào trang này để dễ học lại.
-        </p>
+    <main class="content" id="top">
+      <header class="topbar">
+        <div>
+          <p class="kicker">AUTOMOTIVE EMBEDDED / STM32F103C8T6</p>
+          <h1>Motor Control Notebook</h1>
+          <p class="lede">Tra cứu nhanh và học tuần tự cho đường điều khiển chiết áp → L298N → motor GA37.</p>
+        </div>
+        <div class="topbar-meta">
+          <span class="tag tag-green">OPEN-LOOP</span>
+          <span class="tag">HAL / C</span>
+        </div>
       </header>
 
-      <section class="page page-map" id="project-map">
-        <div class="page-heading">
-          <span class="page-number">00</span>
-          <div>
-            <h2>Project Map</h2>
-            <p>Phần cứng, pin plan, và chuỗi tín hiệu cần nắm trước khi code HAL.</p>
-          </div>
+      <section class="section dashboard" id="dashboard">
+        <div class="section-heading">
+          <div><span class="section-index">00</span><h2>Dashboard</h2></div>
+          <p>Nhìn nhanh trạng thái phần cứng, tín hiệu và kiến thức đã có.</p>
         </div>
 
-        <div class="hardware-grid">
-          <article>
-            <h3>Chuỗi điều khiển</h3>
-            <div class="signal-chain">
-              <span>Chiết áp</span>
-              <span>PA0 ADC</span>
-              <span>Code map</span>
-              <span>TIM1 PWM</span>
-              <span>L298N</span>
-              <span>GA37</span>
+        <div class="dashboard-grid">
+          <article class="signal-panel">
+            <div class="panel-label">SIGNAL PATH</div>
+            <div class="signal-flow" aria-label="Chiết áp đến motor">
+              <span>Pot</span><i>→</i><span>PA0<br><small>ADC</small></span><i>→</i><span>Map<br><small>0..99</small></span><i>→</i><span>PA8<br><small>PWM</small></span><i>→</i><span>L298N</span><i>→</i><span>GA37</span>
             </div>
-            <p>
-              `ADC` không tự điều khiển `CCR1`. Code của mình đọc ADC, tính `Pulse`,
-              rồi ghi vào timer PWM.
-            </p>
+            <p class="muted">Code tạo quan hệ giữa giá trị ADC và Pulse; ADC không tự điều khiển timer.</p>
           </article>
-
-          <article>
-            <h3>Cấu hình chính</h3>
-            <dl class="fact-list">
-              <div><dt>Clock hệ thống</dt><dd>72 MHz</dd></div>
-              <div><dt>PWM motor</dt><dd>PA8 / TIM1_CH1</dd></div>
-              <div><dt>Throttle</dt><dd>PA0 / ADC1_IN0</dd></div>
-              <div><dt>Direction</dt><dd>PB12 / PB13</dd></div>
-              <div><dt>Encoder</dt><dd>PA6 / PA7 / TIM3</dd></div>
+          <article class="status-panel">
+            <div class="panel-label">PROJECT STATE</div>
+            <dl class="compact-facts">
+              <div><dt>Clock</dt><dd>72 MHz</dd></div>
+              <div><dt>PWM</dt><dd>10 kHz</dd></div>
+              <div><dt>Input</dt><dd>ADC 0..4095</dd></div>
+              <div><dt>Output</dt><dd>Pulse 0..99</dd></div>
             </dl>
           </article>
         </div>
 
-        <div class="pin-table">
-          <table>
-            <thead>
-              <tr>
-                <th>Function</th>
-                <th>STM32 pin</th>
-                <th>Peripheral / role</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>Potentiometer wiper</td><td>PA0</td><td>ADC1_IN0, 12-bit ADC `0..4095`</td></tr>
-              <tr><td>Motor PWM / L298N ENA</td><td>PA8</td><td>TIM1_CH1</td></tr>
-              <tr><td>L298N IN1</td><td>PB12</td><td>GPIO output</td></tr>
-              <tr><td>L298N IN2</td><td>PB13</td><td>GPIO output</td></tr>
-              <tr><td>Encoder C1</td><td>PA6</td><td>TIM3_CH1, encoder mode</td></tr>
-              <tr><td>Encoder C2</td><td>PA7</td><td>TIM3_CH2, encoder mode</td></tr>
-              <tr><td>OLED SCL reserved</td><td>PB6</td><td>I2C1_SCL</td></tr>
-              <tr><td>OLED SDA reserved</td><td>PB7</td><td>I2C1_SDA</td></tr>
-              <tr><td>HC-SR04 Trig reserved</td><td>PB0</td><td>GPIO/timer</td></tr>
-              <tr><td>HC-SR04 Echo reserved</td><td>PB1</td><td>GPIO/timer</td></tr>
-            </tbody>
-          </table>
+        <div class="quick-grid">
+          <article><span class="state state-done">ĐÃ CÓ</span><strong>Timer / PWM / ADC</strong><small>Đã cấu hình và hiểu luồng cơ bản.</small></article>
+          <article><span class="state state-done">ĐÃ CÓ</span><strong>HAL modules</strong><small>adc_reader, motor_pwm, motor_driver, app_motor_control.</small></article>
+          <article><span class="state state-now">ĐANG LÀM</span><strong>Test motor</strong><small>Build, flash, direction và duty thấp.</small></article>
+          <article><span class="state state-later">HỌC SAU</span><strong>Encoder feedback</strong><small>TIM3, tốc độ và closed-loop.</small></article>
         </div>
       </section>
 
-      <section class="page page-timer" id="timer">
-        <div class="page-heading">
-          <span class="page-number">01</span>
-          <div>
-            <h2>Timer Foundation</h2>
-            <p>Timer là thước thời gian. Nó tạo tick đều để PWM có khung thời gian chính xác.</p>
-          </div>
+      <section class="section" id="current-task">
+        <div class="section-heading compact-heading">
+          <div><span class="section-index">01</span><h2>Việc hiện tại</h2></div>
+          <p>Một checkpoint nhỏ trước khi mở rộng đồ án.</p>
         </div>
-
-        <div class="formula-row">
-          <article>
-            <h3>Clock vào timer</h3>
-            <code>f_TIM1 = 72 MHz</code>
-            <p>Đây là clock đến timer peripheral, không phải tốc độ PWM.</p>
-          </article>
-          <article>
-            <h3>Prescaler</h3>
-            <code>f_CNT = f_TIM / (PSC + 1)</code>
-            <p>Với `PSC = 71`, counter tăng ở `1 MHz`.</p>
-          </article>
-          <article>
-            <h3>Tick time</h3>
-            <code>T_tick = 1 / f_CNT = 1 us</code>
-            <p>Mỗi lần counter tăng thêm 1 là mất `1 us`.</p>
-          </article>
-        </div>
-
-        <div class="counter-strip" aria-label="Counter đếm từ 0 đến 99">
-          <span>0</span><span>1</span><span>2</span><span>3</span><span>...</span><span>98</span><span>99</span><span>update</span>
-        </div>
-
-        <div class="note-block">
-          <h3>`ARR` là giới hạn đếm, không phải thời gian.</h3>
-          <p>
-            Với `ARR = 99`, counter đếm `0..99`, tổng cộng `100` tick. Khi đạt `ARR`,
-            timer tạo update/overflow event và bắt đầu vòng đếm tiếp theo từ `0`.
-          </p>
-          <code class="wide-code">Thời gian một vòng = (ARR + 1) x T_tick = 100 x 1 us = 100 us</code>
+        <div class="task-strip">
+          <strong>Test open-loop an toàn</strong>
+          <span>Chọn `MOTOR_DRIVER_FORWARD` → đặt chiết áp nhỏ nhất → build/flash → tăng duty từ từ.</span>
+          <span class="task-rule">Chung GND. Nguồn motor từ nguồn ngoài. Không cấp motor từ Blue Pill.</span>
         </div>
       </section>
 
-      <section class="page page-pwm" id="pwm">
-        <div class="page-heading">
-          <span class="page-number">02</span>
-          <div>
-            <h2>PWM Output</h2>
-            <p>`ARR` định chu kỳ PWM. `CCR1/Pulse` định HIGH bao lâu trong chu kỳ đó.</p>
-          </div>
+      <section class="section" id="timer">
+        <div class="section-heading"><div><span class="section-index">02</span><h2>Timer Foundation</h2></div><p>Timer tạo tick đều để các sự kiện phần cứng có mốc thời gian.</p></div>
+        <div class="reference-grid three">
+          <div class="metric"><span>f_TIM1</span><strong>72 MHz</strong><small>Clock đến timer.</small></div>
+          <div class="metric"><span>PSC = 71</span><strong>f_CNT = 1 MHz</strong><small>Counter tăng một triệu lần/giây.</small></div>
+          <div class="metric"><span>T_tick</span><strong>1 us</strong><small>Mỗi counter tick mất một micro giây.</small></div>
         </div>
-
-        <div class="formula-row two">
-          <article>
-            <h3>Chu kỳ PWM</h3>
-            <code>T_PWM = (ARR + 1) x T_tick</code>
-            <code>T_PWM = 100 x 1 us = 100 us</code>
-          </article>
-          <article>
-            <h3>Tần số PWM</h3>
-            <code>f_PWM = 1 / T_PWM</code>
-            <code>f_PWM = 1 / 100 us = 10 kHz</code>
-          </article>
-        </div>
-
-        <div class="role-grid">
-          <article>
-            <h3>`ARR`</h3>
-            <p>Quyết định cả chu kỳ PWM dài bao lâu. Đổi `ARR` là đổi `T_PWM` và `f_PWM`.</p>
-          </article>
-          <article>
-            <h3>`CCR1/Pulse`</h3>
-            <p>Quyết định PA8 HIGH bao lâu. Trong CubeMX/HAL, `Pulse` là giá trị nạp vào `CCR1`.</p>
-          </article>
-          <article>
-            <h3>Duty</h3>
-            <p>`Duty = HIGH_time / T_PWM = CCR1 / (ARR + 1)`.</p>
-          </article>
-        </div>
-
-        <div class="waveform-board" aria-label="Sơ đồ xung PWM theo CCR1">
-          <article class="wave-card">
-            <div>
-              <h3>CCR1 = 0</h3>
-              <p>Duty 0%</p>
-            </div>
-            <div class="scope">
-              <div class="scope-labels"><span>HIGH</span><span>LOW</span></div>
-              <div class="wave wave-0"><span class="low-line"></span></div>
-            </div>
-            <p>HIGH `0 us`, LOW `100 us`</p>
-          </article>
-
-          <article class="wave-card featured">
-            <div>
-              <h3>CCR1 = 50</h3>
-              <p>Duty gần 50%</p>
-            </div>
-            <div class="scope">
-              <div class="scope-labels"><span>HIGH</span><span>LOW</span></div>
-              <div class="wave wave-50"><span class="high"></span><span class="low-line"></span><span class="marker">50us</span></div>
-            </div>
-            <p>HIGH `50 us`, LOW `50 us`</p>
-          </article>
-
-          <article class="wave-card">
-            <div>
-              <h3>CCR1 = 75</h3>
-              <p>Duty gần 75%</p>
-            </div>
-            <div class="scope">
-              <div class="scope-labels"><span>HIGH</span><span>LOW</span></div>
-              <div class="wave wave-75"><span class="high"></span><span class="low-line"></span><span class="marker">75us</span></div>
-            </div>
-            <p>HIGH `75 us`, LOW `25 us`</p>
-          </article>
-        </div>
-
-        <div class="note-block warning">
-          <h3>Nhầm lẫn cần khóa lại</h3>
-          <p>
-            `10,000` là số chu kỳ PWM mỗi giây, không phải số count trong một chu kỳ.
-            `ARR = 99` chỉ tạo `100` tick cho một chu kỳ PWM.
-          </p>
-        </div>
-
-        <div class="contrast-panel">
-          <h3>Ví dụ phụ để thấy đơn vị rõ hơn</h3>
-          <div class="formula-row three">
-            <article><code>PSC = 7199</code><p>`f_CNT = 10 kHz`, `T_tick = 100 us`.</p></article>
-            <article><code>ARR = 9</code><p>`T_PWM = 10 x 100 us = 1 ms`, `f_PWM = 1 kHz`.</p></article>
-            <article><code>CCR1 = 3</code><p>HIGH `300 us`, duty `3 / 10 = 30%`.</p></article>
-          </div>
+        <div class="lesson-block">
+          <h3>ARR là giới hạn đếm</h3>
+          <p>Với `ARR = 99`, counter đếm từ `0..99`: tổng cộng `100` tick. Khi đạt ARR, timer update/overflow rồi bắt đầu vòng mới từ `0`.</p>
+          <div class="equation">T_PWM = (ARR + 1) × T_tick = 100 × 1 us = 100 us</div>
+          <div class="checkpoint"><b>Checkpoint</b><span>ARR không phải đơn vị thời gian. Nó cần kết hợp với `T_tick` để tạo ra thời gian.</span></div>
         </div>
       </section>
 
-      <section class="page page-adc" id="adc">
-        <div class="page-heading">
-          <span class="page-number">03</span>
-          <div>
-            <h2>Throttle ADC</h2>
-            <p>Chiết áp tạo điện áp; ADC đọc điện áp; code map ADC sang `CCR1/Pulse`.</p>
-          </div>
+      <section class="section" id="pwm">
+        <div class="section-heading"><div><span class="section-index">03</span><h2>PWM Output</h2></div><p>ARR tạo khung thời gian; CCR1/Pulse quyết định mức HIGH trong khung đó.</p></div>
+        <div class="reference-grid three">
+          <div class="metric"><span>Chu kỳ</span><strong>100 us</strong><small>(ARR + 1) × T_tick</small></div>
+          <div class="metric"><span>Tần số</span><strong>10 kHz</strong><small>1 / T_PWM</small></div>
+          <div class="metric"><span>Duty</span><strong>CCR1 / 100</strong><small>Với ARR = 99.</small></div>
         </div>
-
-        <div class="hardware-grid">
-          <article>
-            <h3>Nối chiết áp 3 chân</h3>
-            <ul class="clean-list">
-              <li>Một chân ngoài -> `3.3V`</li>
-              <li>Chân ngoài còn lại -> `GND`</li>
-              <li>Chân giữa -> `PA0 / ADC1_IN0`</li>
-            </ul>
-            <p class="safety-line">Không đưa `5V` vào chân ADC của Blue Pill.</p>
-          </article>
-
-          <article>
-            <h3>ADC 12-bit đọc gì?</h3>
-            <table class="compact-table">
-              <tbody>
-                <tr><th>PA0</th><th>ADC</th><th>Ý nghĩa</th></tr>
-                <tr><td>Gần `0V`</td><td>Gần `0`</td><td>Ga thấp</td></tr>
-                <tr><td>Gần `1.65V`</td><td>Khoảng `2048`</td><td>Ga giữa</td></tr>
-                <tr><td>Gần `3.3V`</td><td>Gần `4095`</td><td>Ga cao</td></tr>
-              </tbody>
-            </table>
-          </article>
-        </div>
-
-        <div class="note-block">
-          <h3>ADC nhỏ không tự làm `CCR1` nhỏ.</h3>
-          <p>
-            `ADC` và `CCR1` là hai phần cứng khác nhau. Code của mình tạo quan hệ giữa chúng.
-            Nếu code map cùng chiều, ga cao làm duty cao. Nếu code đảo chiều, ga cao vẫn có thể làm duty thấp.
-          </p>
-          <div class="signal-chain">
-            <span>PA0 voltage</span>
-            <span>ADC value</span>
-            <span>Code map</span>
-            <span>Pulse</span>
-            <span>CCR1</span>
-            <span>Duty</span>
-          </div>
-        </div>
-
-        <div class="formula-row two">
-          <article>
-            <h3>Mapping cùng chiều</h3>
-            <code>Throttle_ratio = ADC_value / 4095</code>
-            <code>Pulse = Throttle_ratio x 99</code>
-            <code>Pulse = ADC_value x 99 / 4095</code>
-          </article>
-          <article>
-            <h3>Ví dụ giữa dải</h3>
-            <code>ADC = 2048</code>
-            <code>Pulse = 2048 x 99 / 4095 ≈ 50</code>
-            <p>Ga giữa -> duty gần `50%` -> motor nhận năng lượng trung bình.</p>
-          </article>
-        </div>
-
-        <div class="pin-table">
-          <table>
-            <thead>
-              <tr>
-                <th>ADC</th>
-                <th>Pulse/CCR1 gần đúng</th>
-                <th>Duty gần đúng</th>
-                <th>Cảm nhận motor</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>0</td><td>0</td><td>0%</td><td>Dừng/yếu nhất</td></tr>
-              <tr><td>1024</td><td>25</td><td>25%</td><td>Yếu</td></tr>
-              <tr><td>2048</td><td>50</td><td>50%</td><td>Trung bình</td></tr>
-              <tr><td>3072</td><td>74</td><td>74%</td><td>Mạnh</td></tr>
-              <tr><td>4095</td><td>99</td><td>99%</td><td>Gần tối đa</td></tr>
-            </tbody>
-          </table>
+        <div class="lesson-block">
+          <h3>CCR1 / Pulse làm gì?</h3>
+          <p>Với `T_tick = 1 us`, `CCR1 = 50` làm tín hiệu PA8 HIGH khoảng `50 us` trong chu kỳ `100 us`, tương đương duty gần `50%`. `Pulse` là tên CubeMX/HAL cho giá trị compare nạp vào CCR1.</p>
+          <table class="data-table"><thead><tr><th>CCR1/Pulse</th><th>HIGH</th><th>Duty gần đúng</th><th>Ý nghĩa</th></tr></thead><tbody>
+            <tr><td>0</td><td>0 us</td><td>0%</td><td>Không cấp năng lượng PWM</td></tr>
+            <tr><td>50</td><td>50 us</td><td>50%</td><td>Mức giữa</td></tr>
+            <tr><td>75</td><td>75 us</td><td>75%</td><td>Mức cao</td></tr>
+            <tr><td>99</td><td>gần 100 us</td><td>gần 99%</td><td>Mức tối đa theo mapping</td></tr>
+          </tbody></table>
+          <div class="checkpoint"><b>Checkpoint</b><span>10,000 là số chu kỳ PWM mỗi giây; 100 là số counter tick trong một chu kỳ.</span></div>
         </div>
       </section>
 
-      <section class="page page-l298n" id="l298n">
-        <div class="page-heading">
-          <span class="page-number">04</span>
-          <div>
-            <h2>L298N Direction</h2>
-            <p>`ENA` nhận PWM để chọn độ mạnh. `IN1/IN2` chọn hướng hoặc trạng thái dừng/phanh.</p>
-          </div>
+      <section class="section" id="adc">
+        <div class="section-heading"><div><span class="section-index">04</span><h2>Throttle ADC</h2></div><p>Chiết áp tạo điện áp, ADC biến điện áp thành số, code map số đó sang Pulse.</p></div>
+        <div class="two-column">
+          <div class="lesson-block"><h3>Chiết áp 3 chân</h3><ul class="clean-list"><li>Một chân ngoài → `3.3V`</li><li>Chân ngoài còn lại → `GND`</li><li>Chân giữa → `PA0 / ADC1_IN0`</li></ul><p class="warning-text">Không đưa 5 V vào chân ADC Blue Pill.</p></div>
+          <div class="lesson-block"><h3>ADC 12-bit</h3><table class="data-table"><tbody><tr><td>0 V</td><td>0</td><td>Ga thấp</td></tr><tr><td>1.65 V</td><td>≈2048</td><td>Ga giữa</td></tr><tr><td>3.3 V</td><td>≈4095</td><td>Ga cao</td></tr></tbody></table></div>
         </div>
-
-        <div class="hardware-grid">
-          <article>
-            <h3>Kết nối điều khiển</h3>
-            <ul class="clean-list">
-              <li>`PA8 / TIM1_CH1` -> L298N `ENA`</li>
-              <li>`PB12` -> L298N `IN1`</li>
-              <li>`PB13` -> L298N `IN2`</li>
-              <li>Nguồn ngoài `12 V / 10 A` -> motor supply của L298N</li>
-            </ul>
-          </article>
-
-          <article>
-            <h3>Logic hướng</h3>
-            <table class="compact-table">
-              <tbody>
-                <tr><th>IN1</th><th>IN2</th><th>Hành vi</th></tr>
-                <tr><td>1</td><td>0</td><td>Quay một chiều</td></tr>
-                <tr><td>0</td><td>1</td><td>Quay chiều ngược</td></tr>
-                <tr><td>0</td><td>0</td><td>Thả trôi/dừng</td></tr>
-                <tr><td>1</td><td>1</td><td>Phanh, tùy module/driver</td></tr>
-              </tbody>
-            </table>
-          </article>
-        </div>
-
-        <div class="note-block warning">
-          <h3>An toàn phần cứng</h3>
-          <p>
-            Không cấp nguồn motor từ Blue Pill. Motor dùng nguồn ngoài, nhưng STM32 GND và L298N GND
-            phải nối chung để tín hiệu điều khiển có cùng mốc điện áp.
-          </p>
-        </div>
+        <div class="lesson-block"><h3>Mapping cùng chiều</h3><div class="equation">Pulse = ADC_value × 99 / 4095</div><p>Ví dụ: `ADC = 2048` → `Pulse ≈ 50` → duty gần `50%`. ADC nhỏ không tự làm CCR1 nhỏ; chính code mapping tạo ra quan hệ đó.</p><div class="checkpoint"><b>Firmware</b><span>`adc_reader` chỉ trả raw `0..4095`; `app_motor_control` mới làm mapping.</span></div></div>
       </section>
 
-      <section class="page page-later" id="later">
-        <div class="page-heading">
-          <span class="page-number">05</span>
-          <div>
-            <h2>Later Topics</h2>
-            <p>Những phần chưa học sâu, giữ ở đây để không nhảy cóc khi đang học ADC/PWM.</p>
-          </div>
+      <section class="section" id="l298n">
+        <div class="section-heading"><div><span class="section-index">05</span><h2>L298N Direction</h2></div><p>ENA nhận PWM để chọn mức năng lượng; IN1/IN2 chọn trạng thái cầu H.</p></div>
+        <div class="two-column">
+          <div class="lesson-block"><h3>Kết nối điều khiển</h3><table class="data-table"><thead><tr><th>STM32</th><th>L298N</th><th>Vai trò</th></tr></thead><tbody><tr><td>`PA8`</td><td>`ENA`</td><td>TIM1 PWM</td></tr><tr><td>`PB12`</td><td>`IN1`</td><td>GPIO direction</td></tr><tr><td>`PB13`</td><td>`IN2`</td><td>GPIO direction</td></tr></tbody></table></div>
+          <div class="lesson-block"><h3>Logic</h3><table class="data-table"><thead><tr><th>IN1</th><th>IN2</th><th>Hành vi</th></tr></thead><tbody><tr><td>1</td><td>0</td><td>Forward</td></tr><tr><td>0</td><td>1</td><td>Reverse</td></tr><tr><td>0</td><td>0</td><td>Coast/stop</td></tr><tr><td>1</td><td>1</td><td>Brake, tùy module</td></tr></tbody></table></div>
         </div>
-
-        <div class="role-grid">
-          <article>
-            <h3>TIM3 Encoder Mode</h3>
-            <p>Đọc encoder C1/C2 ở `PA6/PA7`, đo chiều quay và số xung.</p>
-          </article>
-          <article>
-            <h3>Speed Measurement</h3>
-            <p>Dùng timer interrupt định kỳ để tính tốc độ từ số xung encoder.</p>
-          </article>
-          <article>
-            <h3>Closed-loop Control</h3>
-            <p>So sánh tốc độ mong muốn với tốc độ đo được, rồi chỉnh PWM.</p>
-          </article>
-          <article>
-            <h3>OLED I2C</h3>
-            <p>Dùng `PB6/PB7` sau này để hiển thị throttle, PWM, tốc độ.</p>
-          </article>
-          <article>
-            <h3>HC-SR04</h3>
-            <p>Giữ `PB0/PB1` cho Trig/Echo, chưa cấu hình trong giai đoạn này.</p>
-          </article>
-        </div>
+        <div class="callout warning"><b>An toàn phần cứng</b><span>STM32 GND và L298N GND phải nối chung. Motor dùng nguồn ngoài 12 V. Không cấp nguồn motor từ Blue Pill.</span></div>
       </section>
 
-      <section class="page page-archive" id="archive">
-        <div class="page-heading">
-          <span class="page-number">MD</span>
-          <div>
-            <h2>Notes Archive</h2>
-            <p>`/notes` là source/archive. Không cần đọc trực tiếp nếu trang này đã đủ rõ.</p>
-          </div>
-        </div>
-
-        <div class="archive-links">
-          <a href="notes/01-timer.md">01 - Timer source</a>
-          <a href="notes/02-pwm.md">02 - PWM source</a>
-          <a href="notes/03-led-control.md">03 - LED source</a>
-          <a href="notes/04-dc-motor-control.md">04 - Motor source</a>
-        </div>
+      <section class="section" id="firmware-modules">
+        <div class="section-heading"><div><span class="section-index">06</span><h2>HAL Modules</h2></div><p>Mỗi module có một trách nhiệm; `main.c` chỉ khởi động và gọi app update.</p></div>
+        <table class="data-table module-table"><thead><tr><th>Module</th><th>Public responsibility</th><th>Hardware</th></tr></thead><tbody><tr><td><code>adc_reader.h/.c</code></td><td>Đọc raw ADC và trả `0..4095`.</td><td>PA0 / ADC1_IN0</td></tr><tr><td><code>motor_pwm.h/.c</code></td><td>Start PWM, clamp và ghi Pulse/CCR1 `0..99`.</td><td>PA8 / TIM1_CH1</td></tr><tr><td><code>motor_driver.h/.c</code></td><td>Chọn Forward, Reverse, Stop, Brake.</td><td>PB12 / PB13</td></tr><tr><td><code>app_motor_control.h/.c</code></td><td>Nối ADC → mapping → PWM.</td><td>hadc1 / htim1</td></tr></tbody></table>
+        <div class="two-column"><div class="lesson-block"><h3>HAL flow</h3><ol class="clean-list"><li>CubeMX cấu hình peripheral.</li><li>`MX_..._Init()` khởi tạo.</li><li>Gọi start cho peripheral cần chạy.</li><li>Đọc ADC và map giá trị.</li><li>Ghi Pulse vào CCR1.</li></ol></div><div class="lesson-block"><h3>`main.c` giữ mỏng</h3><p>Include module trong `USER CODE BEGIN Includes`. Gọi start/init trong `USER CODE BEGIN 2`. Trong vòng lặp, gọi `app_motor_control_update(&hadc1, &htim1)` trong `USER CODE BEGIN 3`.</p></div></div>
       </section>
+
+      <section class="section reference-section" id="reference">
+        <div class="section-heading"><div><span class="section-index">R1</span><h2>Reference desk</h2></div><p>Mở phần này khi đang code, không cần đọc lại toàn bộ bài học.</p></div>
+        <div class="reference-block" id="pin-map"><h3>Pin map</h3><table class="data-table"><thead><tr><th>Function</th><th>Pin</th><th>Peripheral / role</th></tr></thead><tbody><tr><td>Pot wiper</td><td>PA0</td><td>ADC1_IN0</td></tr><tr><td>Motor PWM / ENA</td><td>PA8</td><td>TIM1_CH1</td></tr><tr><td>L298N IN1 / IN2</td><td>PB12 / PB13</td><td>GPIO output</td></tr><tr><td>Encoder C1 / C2</td><td>PA6 / PA7</td><td>TIM3_CH1 / CH2, later</td></tr><tr><td>OLED</td><td>PB6 / PB7</td><td>I2C1, reserved</td></tr><tr><td>HC-SR04</td><td>PB0 / PB1</td><td>reserved</td></tr></tbody></table></div>
+        <div class="reference-block" id="formula-sheet"><h3>Formula sheet</h3><div class="formula-list"><code>f_CNT = f_TIM / (PSC + 1)</code><code>T_tick = 1 / f_CNT</code><code>T_PWM = (ARR + 1) × T_tick</code><code>f_PWM = 1 / T_PWM</code><code>Duty = CCR1 / (ARR + 1)</code><code>Pulse = ADC × 99 / 4095</code></div></div>
+      </section>
+
+      <section class="section" id="build-flash">
+        <div class="section-heading"><div><span class="section-index">R2</span><h2>Build & flash</h2></div><p>Build tạo firmware trên máy; flash mới ghi firmware vào STM32.</p></div>
+        <div class="command-list"><div><span>01 / Configure</span><code>cmake --preset Debug</code></div><div><span>02 / Build</span><code>cmake --build --preset Debug</code></div><div><span>03 / ELF → BIN</span><code>arm-none-eabi-objcopy -O binary build/Debug/stm32-motor-controller.elf build/Debug/stm32-motor-controller.bin</code></div><div><span>04 / ST-Link</span><code>st-flash write build/Debug/stm32-motor-controller.bin 0x08000000</code></div></div>
+        <div class="callout warning"><b>Trước khi flash</b><span>BOOT0 = 0. Kết nối SWDIO, SWCLK, GND và reference 3.3 V. Tạm ngắt nguồn motor khi nạp. Motor không lấy nguồn từ Blue Pill.</span></div>
+      </section>
+
+      <section class="section" id="later">
+        <div class="section-heading"><div><span class="section-index">R3</span><h2>Học sau</h2></div><p>Không đưa vào bản open-loop trước khi đường ADC → PWM → L298N ổn định.</p></div>
+        <div class="later-list"><div><span>07</span><strong>TIM3 encoder mode</strong><small>Đọc C1/C2 trên PA6/PA7.</small></div><div><span>08</span><strong>Measured speed</strong><small>Đếm xung theo thời gian.</small></div><div><span>09</span><strong>Filtering</strong><small>Giảm nhiễu tốc độ.</small></div><div><span>10</span><strong>Closed-loop</strong><small>PID và feedback.</small></div><div><span>11</span><strong>OLED / HC-SR04</strong><small>Peripherals đã reserve pin.</small></div></div>
+      </section>
+
+      <section class="section archive-section" id="archive">
+        <div class="section-heading"><div><span class="section-index">MD</span><h2>Markdown archive</h2></div><p>Các file này là nguồn phụ; trang HTML mới là nơi đọc chính.</p></div>
+        <div class="archive-links"><a href="notes/01-timer.md">01 / Timer</a><a href="notes/02-pwm.md">02 / PWM</a><a href="notes/03-led-control.md">03 / LED control</a><a href="notes/04-dc-motor-control.md">04 / DC motor</a></div>
+      </section>
+
+      <footer class="footer"><span>STM32 Motor Workbook</span><span>Static HTML / Vietnamese notes</span></footer>
     </main>
   </div>
 </body>

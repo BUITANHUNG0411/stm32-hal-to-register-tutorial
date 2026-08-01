@@ -28,8 +28,72 @@ Rules:
 - Prefer short lesson sections, compact tables, equations, and concrete hardware examples over long prose.
 - Keep the learning order incremental; do not add future topics before the learner reaches them unless labeling them clearly as "later".
 - If adding a new concept such as ADC, encoder mode, speed measurement, filtering, or closed-loop control, add or update the corresponding section in `index.html` in the same turn.
-- Preserve the current workbook layout in `index.html`: sidebar table of contents, numbered lesson pages, compact technical sections. Do not turn it back into a landing page with a large marketing hero.
+- Preserve the current reference-workbook layout in `index.html`: compact sidebar groups, a small dashboard, numbered learning sections, dense reference tables, and a responsive quick-lookup flow. Do not turn it back into a landing page with a large marketing hero.
+- The current information architecture is: `Dashboard` (`#dashboard`, `#current-task`), `Learn` (`#timer`, `#pwm`, `#adc`, `#l298n`, `#firmware-modules`), `Reference` (`#reference`, `#build-flash`), and `Later/Archive` (`#later`, `#archive`). Preserve these anchors when editing content.
+- The page supports two modes at once: sequential learning through the Learn group and quick lookup through Reference desk tables/formulas/commands. New content should state which mode it serves.
+- Prefer documentation surfaces over presentation cards: compact tables, equations, status labels, callouts, checklists, and code blocks. Keep shadows and decorative spacing restrained.
 - Keep `/notes/*.md` as source/archive links only. The learner should not need to open Markdown to understand the lesson.
+- When teaching HAL/C firmware workflow and the learner answers correctly, immediately add the confirmed knowledge to `stm32-motor-notes/index.html`.
+
+The HTML/CSS visual contract:
+
+- `index.html` remains static and does not require JavaScript or external dependencies.
+- `styles.css` must keep the fixed desktop sidebar, compact mobile navigation, readable main column, technical tables, and horizontally scrollable code/table content on small screens.
+- Keep `index.html` as the primary readable document; `/notes/*.md` are source/archive links only.
+
+## Firmware Architecture Rule
+
+The learner explicitly does not want all application code placed in `main.c`. Teach and implement the STM32 HAL project using small C modules, each with a `.h` public interface and `.c` implementation.
+
+Recommended module split for the first open-loop motor project:
+
+| Module | Responsibility |
+| --- | --- |
+| `adc_reader.h/.c` | Read `ADC1_IN0` on `PA0` and return raw ADC values `0..4095`. It must not know about PWM `ARR` or motor duty. |
+| `motor_pwm.h/.c` | Manage `TIM1_CH1`: start PWM on `TIM_CHANNEL_1`, clamp/write `Pulse/CCR1` in the valid range, currently `0..99`. |
+| `motor_driver.h/.c` | Manage L298N direction pins `PB12/PB13`: forward, reverse, coast/stop, brake if used. |
+| `app_motor_control.h/.c` | Coordinate the open-loop application: read ADC, map raw ADC to Pulse using the current ARR/PWM range, set direction, update PWM. |
+
+`main.c` should stay thin:
+
+- Call CubeMX/HAL generated initialization: `HAL_Init`, `SystemClock_Config`, `MX_GPIO_Init`, `MX_ADC1_Init`, `MX_TIM1_Init`.
+- Call small module init/start functions after generated init, such as starting PWM.
+- In `while (1)`, call one application update function rather than placing all ADC/PWM/GPIO logic inline.
+- Put user includes and calls inside CubeMX `USER CODE BEGIN ...` / `USER CODE END ...` regions so regeneration does not delete them. For example, include `adc_reader.h` inside `USER CODE BEGIN Includes`.
+- Put repeated loop logic inside `USER CODE BEGIN 3`, not between `USER CODE END WHILE` and `USER CODE BEGIN 3`.
+
+When explaining file creation, prefer the STM32 layout:
+
+```text
+Core/Inc/<module>.h
+Core/Src/<module>.c
+```
+
+For CMake-generated projects, remind the learner that adding a new `.c` file may require ensuring it is included in the generated build target, depending on the generated `CMakeLists.txt` pattern.
+
+Current `motor_driver` review notes:
+
+- `motor_driver.h` uses `GPIO_PinState` for GPIO values and maps the fixed pins as `GPIOB`, `GPIO_PIN_12`, and `GPIO_PIN_13`. These names come from STM32 HAL/CMSIS and require the correct device define, currently `STM32F103xB`; do not redefine them manually.
+- Prefer clear names such as `MOTOR_DRIVER_GPIO_PORT`, `MOTOR_DRIVER_IN1_PIN`, and `MOTOR_DRIVER_IN2_PIN`.
+- `motor_driver_set_port(in1_state, in2_state)` should be the low-level helper that calls `HAL_GPIO_WritePin`; `motor_driver_set_direction(direction)` should select a direction and call that helper, not call itself recursively.
+- Every `switch` case must terminate with `break` or `return` unless deliberate fall-through is being taught.
+- Keep the L298N mapping explicit: forward `(SET, RESET)`, reverse `(RESET, SET)`, coast/stop `(RESET, RESET)`, brake `(SET, SET)`. Do not silently swap `STOP` and `BRAKE`.
+- In this CMake project, custom sources such as `adc_reader.c`, `motor_pwm.c`, and `motor_driver.c` must be added to `MX_Application_Src` in `cmake/stm32cubemx/CMakeLists.txt`; headers are not added as build sources.
+- The current `motor_driver.c` logic is considered correct at the basic level when it maps `FORWARD` to `(1,0)`, `REVERSE` to `(0,1)`, `BRAKE` to `(1,1)`, and `STOP` to `(0,0)`, with a terminating `break` in every `switch` case. Prefer `GPIO_PIN_SET` / `GPIO_PIN_RESET` over bare `1` / `0` when teaching the clearer HAL form.
+- Next teaching step after the module review: guide the learner to include `motor_driver.h` in a CubeMX `USER CODE BEGIN Includes` block and call `motor_driver_set_direction(MOTOR_DRIVER_STOP)` in `USER CODE BEGIN 2`, then build before integrating ADC and PWM again. Do not write the learner's code for this step unless explicitly requested.
+- Current build/flash workflow: use `cmake --preset Debug`, then `cmake --build --preset Debug`; the expected ELF is `build/Debug/stm32-motor-controller.elf`. Convert it to BIN with `arm-none-eabi-objcopy -O binary ...elf ...bin`, then flash via ST-Link at `0x08000000`. Keep `BOOT0 = 0`, disconnect motor power during flashing, and never power the motor from the Blue Pill.
+- After flashing, test in layers: with `MOTOR_DRIVER_STOP`, verify PB12/PB13 are LOW before connecting motor power; then set `MOTOR_DRIVER_FORWARD`, start with the potentiometer at minimum, share STM32/L298N GND, power the motor from the external supply, and increase throttle slowly. PA8 PWM duty is best checked with an oscilloscope or logic analyzer.
+- LED testing on PB12/PB13 is optional, only a visual check of GPIO HIGH/LOW; it is not required before progressing.
+- Current project progression toward the open-loop potentiometer -> L298N -> motor demo: build/flash, verify ADC raw `0..4095`, verify ADC-to-Pulse mapping `0..99`, verify direction GPIO, connect common GND and external motor power, test one direction at low duty, then extract the loop into `app_motor_control.c`. Do not introduce encoder feedback until this open-loop path is stable.
+
+Confirmed HAL/channel knowledge:
+
+- `PA8 = TIM1_CH1`, so HAL must use `TIM_CHANNEL_1` for the motor PWM channel.
+- `MX_TIM1_Init()` configures TIM1 but does not make PWM output run by itself.
+- PWM output starts only after starting PWM for `TIM1` + `TIM_CHANNEL_1`.
+- With CubeMX `Pulse = 0`, PWM starts at duty near `0%`, so the motor should not rotate until code updates `CCR1/Pulse`.
+- CubeMX-generated handles such as `hadc1` should be reused by modules. For the first beginner-friendly pass, prefer explicit calls like `adc_reader_read(&hadc1)` rather than hiding the handle too early.
+- For software-triggered ADC reads, teach the HAL order as: `HAL_ADC_Start(hadc)`, then `HAL_ADC_PollForConversion(hadc, timeout)`, then `HAL_ADC_GetValue(hadc)`.
 
 ## Learning Context
 

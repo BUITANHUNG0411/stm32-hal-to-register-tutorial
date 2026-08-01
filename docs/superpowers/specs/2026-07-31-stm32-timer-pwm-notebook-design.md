@@ -1,21 +1,21 @@
-# STM32 Timer PWM Notebook Design
+# Thiết Kế Sổ Tay STM32 Timer PWM
 
-Date: 2026-07-31
+Ngày: 2026-07-31
 
-## Goal
+## Mục Tiêu
 
-Create a small learning notebook for an Automotive Engineering student learning STM32 timer and PWM basics. The notebook must explain enough to understand LED dimming and DC motor speed control using the current STM32F103C8T6 project context.
+Tạo một sổ tay học tập nhỏ cho sinh viên ngành Kỹ thuật Ô tô đang học các khái niệm cơ bản về STM32 timer và PWM. Sổ tay phải giải thích đủ rõ để hiểu việc điều chỉnh độ sáng LED và điều khiển tốc độ động cơ DC trong ngữ cảnh dự án STM32F103C8T6 hiện tại.
 
-The first version focuses only on Timer, PWM, ARR, CCR/Pulse, duty cycle, LED behavior, and DC motor behavior through L298N. Encoder, ADC throttle mapping, closed-loop speed control, OLED, and HC-SR04 are out of scope for this first version.
+Phiên bản đầu tiên chỉ tập trung vào Timer, PWM, ARR, CCR/Pulse, duty cycle, hành vi của LED, và hành vi của động cơ DC qua L298N. Encoder, ánh xạ ADC throttle, điều khiển tốc độ vòng kín, OLED, và HC-SR04 nằm ngoài phạm vi của phiên bản đầu tiên này.
 
-## Format
+## Định Dạng
 
-Use a combined format:
+Dùng định dạng kết hợp:
 
-- Markdown files are the source notes, easy to edit and extend after each lesson.
-- A basic static web page is the visual notebook, optimized for colorful summaries and clear waveform diagrams.
+- Các file Markdown là nguồn ghi chú chính, dễ chỉnh sửa và mở rộng sau mỗi buổi học.
+- Một trang web tĩnh cơ bản là bản sổ tay trực quan, tối ưu cho phần tóm tắt nhiều màu và sơ đồ xung rõ ràng.
 
-Proposed structure:
+Cấu trúc đề xuất:
 
 ```text
 stm32-motor-notes/
@@ -29,73 +29,73 @@ stm32-motor-notes/
     └── 04-dc-motor-control.md
 ```
 
-## Content
+## Nội Dung
 
-The first notebook version covers:
+Phiên bản đầu tiên của sổ tay bao gồm:
 
-1. Timer fundamentals
-   - System clock at 72 MHz.
+1. Nền tảng Timer
+   - System clock ở 72 MHz.
    - Prescaler `PSC = 71`.
-   - Counter tick frequency `f_CNT = 1 MHz`.
-   - One tick equals `1 us`.
-   - `ARR = 99` means the counter counts `0..99`, so one period has 100 ticks.
+   - Tần số counter tick `f_CNT = 1 MHz`.
+   - Một tick bằng `1 us`.
+   - `ARR = 99` nghĩa là counter đếm `0..99`, nên một chu kỳ có 100 tick.
 
-2. PWM fundamentals
-   - PWM as fast HIGH/LOW switching.
-   - PWM period and frequency.
-   - With `ARR = 99`, one PWM period is `100 us`.
-   - PWM frequency is `10 kHz`.
-   - `CCR1` / `Pulse` controls how long PA8 stays HIGH in each PWM period.
+2. Nền tảng PWM
+   - PWM là bật/tắt nhanh giữa MỨC CAO và MỨC THẤP.
+   - Chu kỳ PWM và tần số PWM.
+   - Với `ARR = 99`, một chu kỳ PWM là `100 us`.
+   - Tần số PWM là `10 kHz`.
+   - `CCR1` / `Pulse` điều khiển PA8 ở MỨC CAO trong bao lâu ở mỗi chu kỳ PWM.
 
-3. Waveform diagrams
-   - Clear horizontal HIGH/LOW diagrams for 0%, 25%, 50%, 75%, and near-100% duty.
-   - Each diagram shows time from `0 us` to `100 us`.
-   - Each diagram connects `CCR1` value to HIGH time and LOW time.
+3. Sơ đồ xung
+   - Sơ đồ ngang rõ ràng cho duty 0%, 25%, 50%, 75%, và gần 100%.
+   - Mỗi sơ đồ thể hiện thời gian từ `0 us` đến `100 us`.
+   - Mỗi sơ đồ liên hệ giá trị `CCR1` với thời gian MỨC CAO và thời gian MỨC THẤP.
 
-4. LED control
-   - Low duty makes the LED dim.
-   - High duty makes the LED bright.
-   - Human eyes perceive the average brightness because PWM is fast.
+4. Điều khiển LED
+   - Duty thấp làm LED mờ.
+   - Duty cao làm LED sáng.
+   - Mắt người cảm nhận độ sáng trung bình vì PWM đủ nhanh.
 
-5. DC motor control
-   - PA8 PWM connects to L298N ENA.
-   - PWM duty controls approximate average motor power.
-   - IN1/IN2 choose direction or stop/brake behavior.
-   - Motor supply must come from the external 12 V source.
-   - STM32 and L298N must share GND.
+5. Điều khiển động cơ DC
+   - PA8 PWM nối tới L298N ENA.
+   - Duty PWM điều khiển công suất trung bình gần đúng của motor.
+   - IN1/IN2 chọn hướng hoặc trạng thái dừng/phanh.
+   - Nguồn motor phải đến từ nguồn ngoài 12 V.
+   - STM32 và L298N phải chung GND.
 
-6. Common confusions
-   - `ARR = 99` does not mean 10,000 counts per PWM period.
-   - 10,000 is the number of PWM cycles per second at 10 kHz.
-   - `f_CNT` is the counter tick speed.
-   - `f_PWM` is the full PWM-cycle repetition speed.
-   - `CCR1` changes duty cycle, not PWM frequency.
+6. Các nhầm lẫn thường gặp
+- `ARR = 99` không có nghĩa là 10,000 lần đếm trong một chu kỳ PWM.
+   - 10,000 là số chu kỳ PWM mỗi giây ở tần số 10 kHz.
+   - `f_CNT` là tốc độ tick của counter.
+   - `f_PWM` là tốc độ lặp lại của cả chu kỳ PWM.
+   - `CCR1` thay đổi duty cycle, không thay đổi tần số PWM.
 
-## Web Design
+## Thiết Kế Web
 
-The web page should feel like a colorful technical notebook, not a landing page. It should open directly into the learning content.
+Trang web nên có cảm giác như một sổ tay kỹ thuật nhiều màu, không phải landing page. Trang phải mở thẳng vào nội dung học tập.
 
-Design characteristics:
+Đặc điểm thiết kế:
 
-- Vietnamese text.
-- Light background with clear colored topic sections.
-- Compact formulas and tables.
-- Oscilloscope-like waveform panels.
-- No heavy framework needed.
-- No JavaScript required for version 1 unless a small interaction clearly improves understanding.
+- Văn bản tiếng Việt có dấu.
+- Nền sáng với các phần chủ đề có màu rõ ràng.
+- Công thức và bảng gọn, dễ quét mắt.
+- Panel sơ đồ xung giống oscilloscope đơn giản.
+- Không cần framework nặng.
+- Không cần JavaScript cho phiên bản 1, trừ khi một tương tác nhỏ thật sự giúp dễ hiểu hơn.
 
-## Success Criteria
+## Tiêu Chí Thành Công
 
-The notebook is successful when the learner can answer:
+Sổ tay được xem là đạt khi người học có thể trả lời:
 
-- What does a timer counter do?
-- Why does `PSC = 71` produce a `1 MHz` counter tick from `72 MHz`?
-- Why does `ARR = 99` create 100 ticks per PWM period?
-- Why is the PWM period `100 us` and frequency `10 kHz`?
-- What does `CCR1` control?
-- How does duty cycle affect LED brightness?
-- How does PWM duty affect approximate DC motor power through L298N?
+- Timer counter làm gì?
+- Vì sao `PSC = 71` tạo ra counter tick `1 MHz` từ clock `72 MHz`?
+- Vì sao `ARR = 99` tạo ra 100 tick trong một chu kỳ PWM?
+- Vì sao chu kỳ PWM là `100 us` và tần số là `10 kHz`?
+- `CCR1` điều khiển cái gì?
+- Duty cycle ảnh hưởng độ sáng LED như thế nào?
+- Duty PWM ảnh hưởng công suất gần đúng của động cơ DC qua L298N như thế nào?
 
-## Validation
+## Xác Minh
 
-Verify the files exist and can be opened locally. For the static page, inspect the HTML/CSS enough to confirm the page references are correct and the waveform diagrams are present.
+Xác minh các file tồn tại và có thể mở cục bộ. Với trang tĩnh, kiểm tra HTML/CSS đủ để xác nhận các tham chiếu đúng và các sơ đồ xung có mặt.

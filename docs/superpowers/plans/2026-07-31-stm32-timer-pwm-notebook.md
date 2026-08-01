@@ -1,140 +1,140 @@
-# STM32 Timer PWM Notebook Implementation Plan
+# Kế Hoạch Triển Khai Sổ Tay STM32 Timer PWM
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Dành cho agentic workers:** KỸ NĂNG PHỤ BẮT BUỘC: dùng superpowers:subagent-driven-development (khuyến nghị) hoặc superpowers:executing-plans để triển khai kế hoạch này theo từng task. Các bước dùng cú pháp checkbox (`- [ ]`) để theo dõi.
 
-**Goal:** Build a combined Markdown and static web notebook that explains STM32 Timer/PWM concepts clearly enough for LED dimming and DC motor control.
+**Mục tiêu:** Xây dựng một sổ tay kết hợp Markdown và web tĩnh để giải thích các khái niệm STM32 Timer/PWM đủ rõ cho việc điều chỉnh độ sáng LED và điều khiển động cơ DC.
 
-**Architecture:** Markdown files hold the source learning notes. A standalone `index.html` plus `styles.css` presents the same ideas visually with colored sections, tables, and oscilloscope-style waveform diagrams. The notebook is static and can be opened directly in a browser.
+**Kiến trúc:** Các file Markdown giữ vai trò ghi chú nguồn. Một file `index.html` độc lập cùng `styles.css` trình bày lại cùng ý tưởng dưới dạng trực quan, có section màu, bảng, và sơ đồ xung kiểu oscilloscope. Sổ tay là dạng tĩnh và có thể mở trực tiếp trong trình duyệt.
 
-**Tech Stack:** HTML, CSS, Markdown. No JavaScript and no external dependencies.
+**Tech stack:** HTML, CSS, Markdown. Không dùng JavaScript và không có dependency bên ngoài.
 
-## Global Constraints
+## Ràng Buộc Toàn Cục
 
-- Vietnamese text.
-- Current project context: STM32F103C8T6 Blue Pill, system clock 72 MHz.
-- Timer example: TIM1 PWM on PA8, `PSC = 71`, `ARR = 99`, `f_CNT = 1 MHz`, `T_tick = 1 us`, `T_PWM = 100 us`, `f_PWM = 10 kHz`.
-- Keep focus on Timer, PWM, ARR, CCR/Pulse, duty cycle, LED behavior, and DC motor behavior through L298N.
-- Do not cover ADC throttle mapping, encoder mode, closed-loop control, OLED, or HC-SR04 in version 1.
-- No heavy framework.
-- No JavaScript required for version 1.
-
----
-
-### Task 1: Notebook Markdown Source
-
-**Files:**
-- Create: `stm32-motor-notes/README.md`
-- Create: `stm32-motor-notes/notes/01-timer.md`
-- Create: `stm32-motor-notes/notes/02-pwm.md`
-- Create: `stm32-motor-notes/notes/03-led-control.md`
-- Create: `stm32-motor-notes/notes/04-dc-motor-control.md`
-
-**Interfaces:**
-- Consumes: Approved design spec at `docs/superpowers/specs/2026-07-31-stm32-timer-pwm-notebook-design.md`.
-- Produces: Markdown note files linked by `README.md`; the web page in Task 2 mirrors these ideas.
-
-- [ ] **Step 1: Create the notebook README**
-
-Create `stm32-motor-notes/README.md` with a title, purpose, study order, hardware context, and links to the four note files.
-
-- [ ] **Step 2: Create Timer note**
-
-Create `stm32-motor-notes/notes/01-timer.md` explaining timer, system clock, PSC, `f_CNT`, tick time, ARR, inclusive counting, and the exact `72 MHz -> 1 MHz -> 100 us` example.
-
-- [ ] **Step 3: Create PWM note**
-
-Create `stm32-motor-notes/notes/02-pwm.md` explaining PWM, period, frequency, duty cycle, CCR1/Pulse, and text waveform diagrams for 0%, 25%, 50%, 75%, and near-100%.
-
-- [ ] **Step 4: Create LED note**
-
-Create `stm32-motor-notes/notes/03-led-control.md` explaining LED dimming by average brightness and why PWM frequency matters for visible flicker.
-
-- [ ] **Step 5: Create DC motor note**
-
-Create `stm32-motor-notes/notes/04-dc-motor-control.md` explaining PA8 to L298N ENA, duty as approximate average motor power, IN1/IN2 direction logic, shared GND, and external motor supply.
-
-- [ ] **Step 6: Validate Markdown source files**
-
-Run: `find stm32-motor-notes -maxdepth 3 -type f | sort`
-
-Expected: Output lists `README.md` and all four files under `notes/`.
+- Văn bản tiếng Việt có dấu.
+- Ngữ cảnh project hiện tại: STM32F103C8T6 Blue Pill, system clock 72 MHz.
+- Ví dụ timer: TIM1 PWM trên PA8, `PSC = 71`, `ARR = 99`, `f_CNT = 1 MHz`, `T_tick = 1 us`, `T_PWM = 100 us`, `f_PWM = 10 kHz`.
+- Tập trung vào Timer, PWM, ARR, CCR/Pulse, duty cycle, hành vi LED, và hành vi động cơ DC qua L298N.
+- Không đề cập ánh xạ ADC throttle, encoder mode, closed-loop control, OLED, hoặc HC-SR04 trong phiên bản 1.
+- Không dùng framework nặng.
+- Không cần JavaScript cho phiên bản 1.
 
 ---
 
-### Task 2: Static Visual Web Notebook
+### Công Việc 1: Nguồn Ghi Chú Markdown
 
-**Files:**
-- Create: `stm32-motor-notes/index.html`
-- Create: `stm32-motor-notes/styles.css`
+**Tệp:**
+- Tạo: `stm32-motor-notes/README.md`
+- Tạo: `stm32-motor-notes/notes/01-timer.md`
+- Tạo: `stm32-motor-notes/notes/02-pwm.md`
+- Tạo: `stm32-motor-notes/notes/03-led-control.md`
+- Tạo: `stm32-motor-notes/notes/04-dc-motor-control.md`
 
 **Interfaces:**
-- Consumes: Markdown source notes from Task 1.
-- Produces: A static, browser-openable visual notebook with clear waveform panels and topic sections.
+- Đầu vào: design spec đã duyệt tại `docs/superpowers/specs/2026-07-31-stm32-timer-pwm-notebook-design.md`.
+- Đầu ra: các file ghi chú Markdown được liên kết bởi `README.md`; trang web trong Công Việc 2 phản chiếu các ý tưởng này.
 
-- [ ] **Step 1: Create HTML structure**
+- [ ] **Bước 1: Tạo README của sổ tay**
 
-Create `stm32-motor-notes/index.html` with:
+Tạo `stm32-motor-notes/README.md` với tiêu đề, mục đích, thứ tự học, ngữ cảnh phần cứng, và liên kết tới bốn file note.
 
-- Header naming the notebook.
-- Navigation links to Timer, PWM, LED, and motor sections.
-- Formula cards for `f_CNT`, `T_PWM`, and `f_PWM`.
-- Waveform panels for `CCR1 = 0`, `25`, `50`, `75`, and `99`.
-- Summary table comparing ARR, CCR1, duty, HIGH time, LOW time, and behavior.
-- Safety note for L298N shared GND and external 12 V motor supply.
+- [ ] **Bước 2: Tạo note Timer**
 
-- [ ] **Step 2: Create CSS styling**
+Tạo `stm32-motor-notes/notes/01-timer.md` giải thích timer, system clock, PSC, `f_CNT`, tick time, ARR, cách đếm bao gồm cả 0, và ví dụ chính xác `72 MHz -> 1 MHz -> 100 us`.
 
-Create `stm32-motor-notes/styles.css` with:
+- [ ] **Bước 3: Tạo note PWM**
 
-- Light notebook-like page styling.
-- Clear colored sections that are not dominated by a single hue.
-- Responsive layout for desktop and mobile.
-- Waveform rows with stable dimensions and readable labels.
-- Print-friendly basics through normal semantic HTML.
+Tạo `stm32-motor-notes/notes/02-pwm.md` giải thích PWM, chu kỳ, tần số, duty cycle, CCR1/Pulse, và sơ đồ xung dạng text cho 0%, 25%, 50%, 75%, và gần 100%.
 
-- [ ] **Step 3: Validate local links**
+- [ ] **Bước 4: Tạo note LED**
 
-Run: `rg 'href=' stm32-motor-notes/index.html`
+Tạo `stm32-motor-notes/notes/03-led-control.md` giải thích việc điều chỉnh độ sáng LED bằng độ sáng trung bình và vì sao tần số PWM ảnh hưởng hiện tượng nhấp nháy nhìn thấy được.
 
-Expected: Links include `styles.css`, section anchors, and the Markdown notes.
+- [ ] **Bước 5: Tạo note động cơ DC**
 
-- [ ] **Step 4: Validate waveform content**
+Tạo `stm32-motor-notes/notes/04-dc-motor-control.md` giải thích PA8 nối tới L298N ENA, duty là công suất motor trung bình gần đúng, logic hướng IN1/IN2, GND chung, và nguồn motor ngoài.
 
-Run: `rg 'CCR1 =|Duty|HIGH|LOW|100 us|10 kHz' stm32-motor-notes/index.html stm32-motor-notes/styles.css`
+- [ ] **Bước 6: Xác minh các file nguồn Markdown**
 
-Expected: Output shows waveform labels, formulas, and timing text.
+Chạy: `find stm32-motor-notes -maxdepth 3 -type f | sort`
+
+Kỳ vọng: đầu ra liệt kê `README.md` và cả bốn file trong thư mục `notes/`.
 
 ---
 
-### Task 3: Final Verification
+### Công Việc 2: Sổ Tay Web Tĩnh Trực Quan
 
-**Files:**
-- Inspect: `stm32-motor-notes/index.html`
-- Inspect: `stm32-motor-notes/styles.css`
-- Inspect: `stm32-motor-notes/notes/*.md`
+**Tệp:**
+- Tạo: `stm32-motor-notes/index.html`
+- Tạo: `stm32-motor-notes/styles.css`
 
 **Interfaces:**
-- Consumes: All files from Tasks 1 and 2.
-- Produces: Verified notebook ready to open locally.
+- Đầu vào: các note Markdown từ Công Việc 1.
+- Đầu ra: một sổ tay trực quan dạng web tĩnh, mở được bằng trình duyệt, có panel sơ đồ xung và các section chủ đề rõ ràng.
 
-- [ ] **Step 1: Check file tree**
+- [ ] **Bước 1: Tạo cấu trúc HTML**
 
-Run: `find stm32-motor-notes -maxdepth 3 -type f | sort`
+Tạo `stm32-motor-notes/index.html` với:
 
-Expected: The tree includes `README.md`, `index.html`, `styles.css`, and the four Markdown notes.
+- Header đặt tên sổ tay.
+- Link điều hướng tới các section Timer, PWM, LED, và motor.
+- Formula card cho `f_CNT`, `T_PWM`, và `f_PWM`.
+- Panel sơ đồ xung cho `CCR1 = 0`, `25`, `50`, `75`, và `99`.
+- Bảng tóm tắt so sánh ARR, CCR1, duty, thời gian MỨC CAO, thời gian MỨC THẤP, và hành vi.
+- Ghi chú an toàn về GND chung của L298N và nguồn motor ngoài 12 V.
 
-- [ ] **Step 2: Check for unfinished markers**
+- [ ] **Bước 2: Tạo CSS styling**
 
-Run: `rg 'TODO|TBD|lorem|placeholder' stm32-motor-notes docs/superpowers/specs/2026-07-31-stm32-timer-pwm-notebook-design.md`
+Tạo `stm32-motor-notes/styles.css` với:
 
-Expected: No matches.
+- Phong cách trang giống sổ tay nền sáng.
+- Các section màu rõ ràng, không bị thống trị bởi một họ màu duy nhất.
+- Layout responsive cho desktop và mobile.
+- Các hàng waveform có kích thước ổn định và nhãn dễ đọc.
+- Nền tảng print-friendly thông qua HTML semantic bình thường.
 
-- [ ] **Step 3: Check page references**
+- [ ] **Bước 3: Xác minh liên kết cục bộ**
 
-Run: `rg 'notes/01-timer.md|notes/02-pwm.md|notes/03-led-control.md|notes/04-dc-motor-control.md|styles.css' stm32-motor-notes/index.html stm32-motor-notes/README.md`
+Chạy: `rg 'href=' stm32-motor-notes/index.html`
 
-Expected: Output confirms the web page and README link to the notes and stylesheet.
+Kỳ vọng: link bao gồm `styles.css`, section anchor, và các note Markdown.
 
-- [ ] **Step 4: Open instruction**
+- [ ] **Bước 4: Xác minh nội dung sơ đồ xung**
 
-The static notebook is ready when `stm32-motor-notes/index.html` can be opened directly in a browser.
+Chạy: `rg 'CCR1 =|Duty|MỨC CAO|MỨC THẤP|100 us|10 kHz' stm32-motor-notes/index.html stm32-motor-notes/styles.css`
+
+Kỳ vọng: đầu ra hiển thị nhãn waveform, công thức, và text timing.
+
+---
+
+### Công Việc 3: Xác Minh Cuối
+
+**Tệp:**
+- Kiểm tra: `stm32-motor-notes/index.html`
+- Kiểm tra: `stm32-motor-notes/styles.css`
+- Kiểm tra: `stm32-motor-notes/notes/*.md`
+
+**Interfaces:**
+- Đầu vào: tất cả file từ Công Việc 1 và Công Việc 2.
+- Đầu ra: sổ tay đã xác minh, sẵn sàng mở cục bộ.
+
+- [ ] **Bước 1: Kiểm tra cây file**
+
+Chạy: `find stm32-motor-notes -maxdepth 3 -type f | sort`
+
+Kỳ vọng: Cây file bao gồm `README.md`, `index.html`, `styles.css`, và bốn note Markdown.
+
+- [ ] **Bước 2: Kiểm tra marker chưa hoàn thiện**
+
+Chạy: `rg 'TODO|TBD|lorem|placeholder' stm32-motor-notes docs/superpowers/specs/2026-07-31-stm32-timer-pwm-notebook-design.md`
+
+Kỳ vọng: Không có match.
+
+- [ ] **Bước 3: Kiểm tra tham chiếu trang**
+
+Chạy: `rg 'notes/01-timer.md|notes/02-pwm.md|notes/03-led-control.md|notes/04-dc-motor-control.md|styles.css' stm32-motor-notes/index.html stm32-motor-notes/README.md`
+
+Kỳ vọng: đầu ra xác nhận trang web và README liên kết tới các note và stylesheet.
+
+- [ ] **Bước 4: Hướng dẫn mở**
+
+Sổ tay tĩnh sẵn sàng khi `stm32-motor-notes/index.html` có thể mở trực tiếp trong trình duyệt.

@@ -1,107 +1,107 @@
-# 03 - Dieu Khien LED Bang PWM
+# 03 - Điều Khiển LED Bằng PWM
 
-## 1. LED neu bat/tat cham
+## 1. LED nếu bật/tắt chậm
 
-Neu ban bat/tat LED cham, mat nguoi se thay LED nhap nhay:
+Nếu bạn bật/tắt LED chậm, mắt người sẽ thấy LED nhấp nháy:
 
 ```text
-Sang ... tat ... sang ... tat ...
+Sáng ... tắt ... sáng ... tắt ...
 ```
 
-Dieu nay khong phai dimming tot, vi nguoi nhin thay flicker.
+Điều này không phải cách điều chỉnh độ sáng tốt, vì người nhìn thấy hiện tượng nhấp nháy.
 
-## 2. LED neu bat/tat nhanh bang PWM
+## 2. LED nếu bật/tắt nhanh bằng PWM
 
-Neu PWM nhanh, vi du `10 kHz`, mot chu ky chi dai:
+Nếu PWM nhanh, ví dụ `10 kHz`, một chu kỳ chỉ dài:
 
 ```text
 100 us
 ```
 
-Mat nguoi khong kip thay tung xung bat/tat. No chi cam nhan do sang trung binh.
+Mắt người không kịp thấy từng xung bật/tắt. Nó chỉ cảm nhận độ sáng trung bình.
 
-## 3. Duty thap: LED mo
+## 3. Duty thấp: LED mờ
 
-Vi du `CCR1 = 25`:
+Ví dụ `CCR1 = 25`:
 
 ```text
-HIGH 25 us, LOW 75 us
+MỨC CAO 25 us, MỨC THẤP 75 us
 Duty 25%
 ```
 
-So do:
+Sơ đồ:
 
 ```text
-LED pin
-HIGH  ┌────────────┐
-      │            │
-LOW   ┘            └──────────────────────────────────
-      0us         25us                               100us
+Chân LED
+MỨC CAO   ┌────────────┐
+          │            │
+MỨC THẤP  ┘            └──────────────────────────────
+          0us         25us                         100us
 ```
 
-LED duoc cap dien chi 25% thoi gian, nen nhin mo.
+LED được cấp điện chỉ 25% thời gian, nên nhìn mờ.
 
-## 4. Duty trung binh: LED sang vua
+## 4. Duty trung bình: LED sáng vừa
 
-Vi du `CCR1 = 50`:
+Ví dụ `CCR1 = 50`:
 
 ```text
-HIGH 50 us, LOW 50 us
+MỨC CAO 50 us, MỨC THẤP 50 us
 Duty 50%
 ```
 
-So do:
+Sơ đồ:
 
 ```text
-LED pin
-HIGH  ┌────────────────────────┐
-      │                        │
-LOW   ┘                        └──────────────────────
-      0us                     50us                  100us
+Chân LED
+MỨC CAO   ┌────────────────────────┐
+          │                        │
+MỨC THẤP  ┘                        └──────────────────
+          0us                     50us              100us
 ```
 
-LED duoc cap dien nua thoi gian, nen nhin sang vua.
+LED được cấp điện nửa thời gian, nên nhìn sáng vừa.
 
-## 5. Duty cao: LED sang manh
+## 5. Duty cao: LED sáng mạnh
 
-Vi du `CCR1 = 75`:
+Ví dụ `CCR1 = 75`:
 
 ```text
-HIGH 75 us, LOW 25 us
+MỨC CAO 75 us, MỨC THẤP 25 us
 Duty 75%
 ```
 
-So do:
+Sơ đồ:
 
 ```text
-LED pin
-HIGH  ┌────────────────────────────────────┐
-      │                                    │
-LOW   ┘                                    └──────────
-      0us                                75us       100us
+Chân LED
+MỨC CAO   ┌────────────────────────────────────┐
+          │                                    │
+MỨC THẤP  ┘                                    └──────
+          0us                                75us   100us
 ```
 
-LED duoc cap dien phan lon thoi gian, nen nhin sang hon.
+LED được cấp điện phần lớn thời gian, nên nhìn sáng hơn.
 
-## 6. Dieu can nho khi dieu khien LED
+## 6. Điều cần nhớ khi điều khiển LED
 
-PWM khong lam chan LED co dien ap analog lien tuc 25%, 50%, hay 75%.
+PWM không làm chân LED có điện áp analog liên tục 25%, 50%, hay 75%.
 
-Thuc te chan van chi co hai trang thai:
+Thực tế chân vẫn chỉ có hai trạng thái:
 
 ```text
-HIGH hoac LOW
+MỨC CAO hoặc MỨC THẤP
 ```
 
-Nhung vi bat/tat nhanh, mat nguoi thay gia tri trung binh.
+Nhưng vì bật/tắt nhanh, mắt người thấy giá trị trung bình.
 
-## 7. Ket noi voi Timer
+## 7. Kết nối với Timer
 
-Neu LED duoc noi vao mot chan PWM, thi:
+Nếu LED được nối vào một chân PWM, thì:
 
-| Gia tri | Tac dung |
+| Giá trị | Tác dụng |
 | --- | --- |
-| `ARR` | Chon PWM lap lai nhanh hay cham |
-| `CCR1/Pulse` | Chon LED sang bao nhieu |
-| `f_PWM` | Neu qua thap co the thay nhap nhay |
-| Duty | Ty le thoi gian LED duoc bat |
+| `ARR` | Chọn PWM lặp lại nhanh hay chậm |
+| `CCR1/Pulse` | Chọn LED sáng bao nhiêu |
+| `f_PWM` | Nếu quá thấp có thể thấy nhấp nháy |
+| Duty | Tỉ lệ thời gian LED được bật |

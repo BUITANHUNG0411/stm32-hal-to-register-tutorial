@@ -1,30 +1,30 @@
-# 02 - PWM: Xung Bat Tat Nhanh
+# 02 - PWM: Xung Bật Tắt Nhanh
 
-## 1. PWM la gi?
+## 1. PWM là gì?
 
-PWM la viet tat cua **Pulse Width Modulation**, tuc dieu che do rong xung.
+PWM là viết tắt của **Pulse Width Modulation**, tức điều chế độ rộng xung.
 
-No khong tao ra dien ap analog that su. No bat/tat rat nhanh:
+Nó không tạo ra điện áp analog thật sự. Nó bật/tắt rất nhanh:
 
 ```text
-HIGH, LOW, HIGH, LOW, HIGH, LOW...
+MỨC CAO, MỨC THẤP, MỨC CAO, MỨC THẤP...
 ```
 
-Neu bat/tat du nhanh, LED se thay do sang trung binh, con motor se nhan nang luong trung binh.
+Nếu bật/tắt đủ nhanh, LED sẽ thấy độ sáng trung bình, còn motor sẽ nhận năng lượng trung bình.
 
-## 2. Chu ky PWM
+## 2. Chu kỳ PWM
 
-Voi Timer 1 hien tai:
+Với Timer 1 hiện tại:
 
 ```text
 PSC = 71
 ARR = 99
 1 tick = 1 us
-1 chu ky PWM = 100 tick = 100 us
+1 chu kỳ PWM = 100 tick = 100 us
 f_PWM = 10 kHz
 ```
 
-Mot chu ky PWM la mot lan timer dem tu `0` den `99`.
+Một chu kỳ PWM là một lần timer đếm từ `0` đến `99`.
 
 ```text
 0us                                                100us
@@ -32,109 +32,109 @@ Mot chu ky PWM la mot lan timer dem tu `0` den `99`.
 0    1    2    3    ...                         98   99
 ```
 
-## 3. CCR1/Pulse la gi?
+## 3. CCR1/Pulse là gì?
 
-`CCR1` la Capture/Compare Register kenh 1. Trong CubeMX/HAL, ban hay thay no duoi ten **Pulse**.
+`CCR1` là Capture/Compare Register kênh 1. Trong CubeMX/HAL, bạn hay thấy nó dưới tên **Pulse**.
 
-Voi PWM mode thong dung, co the hieu don gian:
+Với PWM mode thông dụng, có thể hiểu đơn giản:
 
 ```text
-Counter < CCR1   => chan PWM HIGH
-Counter >= CCR1  => chan PWM LOW
+Counter < CCR1   => chân PWM ở MỨC CAO
+Counter >= CCR1  => chân PWM ở MỨC THẤP
 ```
 
 Trong project:
 
 ```text
 PA8 = TIM1_CH1
-CCR1 = Pulse cua TIM1 Channel 1
+CCR1 = Pulse của TIM1 Channel 1
 ```
 
-Vay `CCR1` quyet dinh PA8 HIGH bao lau trong moi chu ky `100 us`.
+Vậy `CCR1` quyết định PA8 ở MỨC CAO bao lâu trong mỗi chu kỳ `100 us`.
 
-## 4. So do xung theo CCR1
+## 4. Sơ đồ xung theo CCR1
 
 ### CCR1 = 0, duty 0%
 
 ```text
 PA8
-HIGH
-LOW   ────────────────────────────────────────────────
-      0us                                            100us
+MỨC CAO
+MỨC THẤP  ────────────────────────────────────────────
+          0us                                      100us
 
-HIGH time = 0 us
-LOW time  = 100 us
+Thời gian MỨC CAO  = 0 us
+Thời gian MỨC THẤP = 100 us
 ```
 
-### CCR1 = 25, duty gan 25%
+### CCR1 = 25, duty gần 25%
 
 ```text
 PA8
-HIGH  ┌────────────┐
-      │            │
-LOW   ┘            └──────────────────────────────────
-      0us         25us                               100us
+MỨC CAO   ┌────────────┐
+          │            │
+MỨC THẤP  ┘            └──────────────────────────────
+          0us         25us                         100us
 
-HIGH time = 25 us
-LOW time  = 75 us
+Thời gian MỨC CAO  = 25 us
+Thời gian MỨC THẤP = 75 us
 ```
 
-### CCR1 = 50, duty gan 50%
+### CCR1 = 50, duty gần 50%
 
 ```text
 PA8
-HIGH  ┌────────────────────────┐
-      │                        │
-LOW   ┘                        └──────────────────────
-      0us                     50us                  100us
+MỨC CAO   ┌────────────────────────┐
+          │                        │
+MỨC THẤP  ┘                        └──────────────────
+          0us                     50us              100us
 
-HIGH time = 50 us
-LOW time  = 50 us
+Thời gian MỨC CAO  = 50 us
+Thời gian MỨC THẤP = 50 us
 ```
 
-### CCR1 = 75, duty gan 75%
+### CCR1 = 75, duty gần 75%
 
 ```text
 PA8
-HIGH  ┌────────────────────────────────────┐
-      │                                    │
-LOW   ┘                                    └──────────
-      0us                                75us       100us
+MỨC CAO   ┌────────────────────────────────────┐
+          │                                    │
+MỨC THẤP  ┘                                    └──────
+          0us                                75us   100us
 
-HIGH time = 75 us
-LOW time  = 25 us
+Thời gian MỨC CAO  = 75 us
+Thời gian MỨC THẤP = 25 us
 ```
 
-### CCR1 = 99, duty gan 99%
+### CCR1 = 99, duty gần 99%
 
 ```text
 PA8
-HIGH  ┌──────────────────────────────────────────────┐
-      │                                              │
-LOW   ┘                                              └
-      0us                                          99us 100us
+MỨC CAO   ┌──────────────────────────────────────────┐
+          │                                          │
+MỨC THẤP  ┘                                          └
+          0us                                      99us 100us
 
-HIGH time gan 99 us
-LOW time  gan 1 us
+Thời gian MỨC CAO  gần 99 us
+Thời gian MỨC THẤP gần 1 us
 ```
 
-## 5. Duty cycle la gi?
+## 5. Duty cycle là gì?
 
-Duty cycle la ti le thoi gian HIGH trong mot chu ky PWM.
+Duty cycle là tỉ lệ thời gian MỨC CAO trong một chu kỳ PWM.
 
 ```text
-Duty = HIGH time / total period
+Duty = thời gian MỨC CAO / toàn bộ chu kỳ
 ```
 
-Voi `ARR = 99`, mot chu ky co `100 tick`, nen co the uoc tinh:
+Với `ARR = 99`, một chu kỳ có `100 tick`, nên có thể ước tính:
 
 ```text
-Duty gan dung = CCR1 / 100
+Duty gần đúng = CCR1 / 100
 ```
 
-Vi du:
+Ví dụ:
 
-| CCR1 | HIGH time | LOW time | Duty gan dung |
+| CCR1 | Thời gian MỨC CAO | Thời gian MỨC THẤP | Duty gần đúng |
 | --- | ---: | ---: | ---: |
 | 0 | 0 us | 100 us | 0% |
 | 25 | 25 us | 75 us | 25% |
@@ -142,22 +142,42 @@ Vi du:
 | 75 | 75 us | 25 us | 75% |
 | 99 | 99 us | 1 us | 99% |
 
-## 6. ARR va CCR1 khac nhau the nao?
+## 6. ARR và CCR1 khác nhau thế nào?
 
-| Thanh phan | Quyet dinh cai gi? |
+| Thành phần | Quyết định cái gì? |
 | --- | --- |
-| `ARR` | Do dai ca chu ky PWM |
-| `CCR1` | HIGH bao lau trong chu ky do |
+| `ARR` | Độ dài cả chu kỳ PWM |
+| `CCR1` | MỨC CAO kéo dài bao lâu trong chu kỳ đó |
 
-Neu giu `ARR = 99`, tan so PWM giu o `10 kHz`.
+Nếu giữ `ARR = 99`, tần số PWM giữ ở `10 kHz`.
 
-Khi thay doi `CCR1`, ta khong doi tan so PWM. Ta chi doi **duty cycle**.
+Khi thay đổi `CCR1`, ta không đổi tần số PWM. Ta chỉ đổi **duty cycle**.
 
-## 7. Tom tat
+## 7. Vì sao CubeMX đặt Pulse ban đầu bằng 0?
+
+Trong CubeMX, `Pulse` là giá trị ban đầu của `CCR1` cho kênh PWM.
+
+Với motor, nên đặt:
 
 ```text
-ARR  = khung thoi gian ca chu ky
-CCR1 = phan HIGH nam trong khung do
-PWM  = bat/tat nhanh theo chu ky
-Duty = HIGH time / total period
+Pulse = 0
+```
+
+Lý do: khi firmware vừa start PWM, motor chưa nên quay ngay. `Pulse = 0` tạo duty gần `0%`, tức trạng thái khởi động an toàn.
+
+Sau đó trong code:
+
+```text
+Đọc ADC chiết áp -> map sang Pulse mới -> ghi vào CCR1
+```
+
+Vậy `Pulse = 0` chỉ là giá trị ban đầu, không phải giá trị cố định mãi mãi.
+
+## 8. Tóm tắt
+
+```text
+ARR  = khung thời gian của cả chu kỳ
+CCR1 = phần MỨC CAO nằm trong khung đó
+PWM  = bật/tắt nhanh theo chu kỳ
+Duty = thời gian MỨC CAO / toàn bộ chu kỳ
 ```

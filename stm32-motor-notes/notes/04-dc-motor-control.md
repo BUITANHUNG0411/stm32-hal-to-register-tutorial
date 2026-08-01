@@ -1,116 +1,237 @@
-# 04 - Dieu Khien Dong Co DC Bang PWM Va L298N
+# 04 - Điều Khiển Động Cơ DC Bằng PWM Và L298N
 
-## 1. Vai tro cua L298N
+## 1. Vai trò của L298N
 
-STM32 khong cap dong truc tiep cho motor DC. Chan STM32 chi la tin hieu dieu khien.
+STM32 không cấp dòng trực tiếp cho motor DC. Chân STM32 chỉ là tín hiệu điều khiển.
 
 Trong project:
 
 ```text
-PA8 PWM  -> L298N ENA
-PB12     -> L298N IN1
-PB13     -> L298N IN2
-Motor    -> L298N OUT1/OUT2
-Nguon motor -> 12 V ngoai
+PA8 PWM      -> L298N ENA
+PB12         -> L298N IN1
+PB13         -> L298N IN2
+Motor        -> L298N OUT1/OUT2
+Nguồn motor  -> 12 V ngoài
 ```
 
-L298N nhan tin hieu tu STM32, roi dong/ngat nguon motor theo tin hieu do.
+L298N nhận tín hiệu từ STM32, rồi đóng/ngắt nguồn motor theo tín hiệu đó.
 
-## 2. PWM tren ENA lam gi?
+## 2. PWM trên ENA làm gì?
 
-Chan `ENA` cua L298N cho phep hoac chan dong co.
+Chân `ENA` của L298N cho phép hoặc chặn động cơ.
 
-Neu `PA8` tao PWM dua vao `ENA`, thi L298N se cap nang luong cho motor theo tung xung:
+Nếu `PA8` tạo PWM đưa vào `ENA`, thì L298N sẽ cấp năng lượng cho motor theo từng xung:
 
 ```text
-PA8 HIGH -> ENA bat -> motor duoc cap nang luong
-PA8 LOW  -> ENA tat -> motor tam thoi khong duoc cap nang luong
+PA8 MỨC CAO  -> ENA bật -> motor được cấp năng lượng
+PA8 MỨC THẤP -> ENA tắt -> motor tạm thời không được cấp năng lượng
 ```
 
-Vi PWM dang o `10 kHz`, moi chu ky chi dai `100 us`. Motor co quan tinh co hoc, nen khong dung/quay lai theo tung xung nho. No cam nhan gan nhu cong suat trung binh.
+Vì PWM đang ở `10 kHz`, mỗi chu kỳ chỉ dài `100 us`. Motor có quán tính cơ học, nên không dừng/quay lại theo từng xung nhỏ. Nó cảm nhận gần như công suất trung bình.
 
-## 3. Duty thap: motor yeu
+## 3. Duty thấp: motor yếu
 
-Vi du `CCR1 = 25`:
-
-```text
-ENA
-HIGH  ┌────────────┐
-      │            │
-LOW   ┘            └──────────────────────────────────
-      0us         25us                               100us
-
-Motor nhan nang luong gan 25% thoi gian.
-```
-
-Ket qua thuc te: motor co xu huong quay cham/yeu hon, nhung con phu thuoc tai, ma sat, nguon, va dac tinh motor.
-
-## 4. Duty 50%: motor trung binh
-
-Vi du `CCR1 = 50`:
+Ví dụ `CCR1 = 25`:
 
 ```text
 ENA
-HIGH  ┌────────────────────────┐
-      │                        │
-LOW   ┘                        └──────────────────────
-      0us                     50us                  100us
+MỨC CAO   ┌────────────┐
+          │            │
+MỨC THẤP  ┘            └──────────────────────────────
+          0us         25us                         100us
 
-Motor nhan nang luong gan 50% thoi gian.
+Motor nhận năng lượng gần 25% thời gian.
 ```
 
-## 5. Duty cao: motor manh
+Kết quả thực tế: motor có xu hướng quay chậm/yếu hơn, nhưng còn phụ thuộc tải, ma sát, nguồn, và đặc tính motor.
 
-Vi du `CCR1 = 75`:
+## 4. Duty 50%: motor trung bình
+
+Ví dụ `CCR1 = 50`:
 
 ```text
 ENA
-HIGH  ┌────────────────────────────────────┐
-      │                                    │
-LOW   ┘                                    └──────────
-      0us                                75us       100us
+MỨC CAO   ┌────────────────────────┐
+          │                        │
+MỨC THẤP  ┘                        └──────────────────
+          0us                     50us              100us
 
-Motor nhan nang luong gan 75% thoi gian.
+Motor nhận năng lượng gần 50% thời gian.
 ```
 
-## 6. IN1 va IN2 quyet dinh huong
+## 5. Duty cao: motor mạnh
 
-PWM tren `ENA` quyet dinh motor duoc cap nang luong bao nhieu. Con `IN1/IN2` quyet dinh huong dong qua motor.
+Ví dụ `CCR1 = 75`:
 
-| IN1 | IN2 | Hanh vi gan dung |
+```text
+ENA
+MỨC CAO   ┌────────────────────────────────────┐
+          │                                    │
+MỨC THẤP  ┘                                    └──────
+          0us                                75us   100us
+
+Motor nhận năng lượng gần 75% thời gian.
+```
+
+## 6. IN1 và IN2 quyết định hướng
+
+PWM trên `ENA` quyết định motor được cấp năng lượng bao nhiêu. Còn `IN1/IN2` quyết định hướng dòng qua motor.
+
+| IN1 | IN2 | Hành vi gần đúng |
 | --- | --- | --- |
-| 1 | 0 | Quay mot chieu |
-| 0 | 1 | Quay chieu nguoc lai |
-| 0 | 0 | Coast/stop, tuy module va cach noi |
-| 1 | 1 | Brake, nhung tuy module/driver co caveat |
+| 1 | 0 | Quay một chiều |
+| 0 | 1 | Quay chiều ngược lại |
+| 0 | 0 | Thả trôi/dừng, tùy module và cách nối |
+| 1 | 1 | Phanh, nhưng còn tùy module/driver |
 
-Khi moi hoc, hay tam nho:
+Khi mới học, hãy tạm nhớ:
 
 ```text
-IN1/IN2 = chon huong
-ENA PWM = chon do manh
+IN1/IN2 = chọn hướng
+ENA PWM = chọn độ mạnh
 ```
 
-## 7. Luu y an toan
+## 7. Lưu ý an toàn
 
-Khong cap nguon motor tu Blue Pill.
+Không cấp nguồn motor từ Blue Pill.
 
-Nen dung:
+Nên dùng:
 
 ```text
-Nguon 12 V ngoai -> L298N motor supply
+Nguồn 12 V ngoài -> L298N motor supply
 STM32 GND -------+
 L298N GND -------+  chung mass
 ```
 
-STM32 va L298N phai chung GND de tin hieu `PA8`, `PB12`, `PB13` co cung moc dien ap.
+STM32 và L298N phải chung GND để tín hiệu `PA8`, `PB12`, `PB13` có cùng mốc điện áp.
 
-## 8. Tom tat
+## 8. Tóm tắt
 
-| Gia tri | Tac dung voi motor |
+| Giá trị | Tác dụng với motor |
 | --- | --- |
-| `ARR` | Dinh chu ky/tan so PWM |
-| `CCR1/Pulse` | Dinh duty, tuc thoi gian ENA duoc bat |
-| Duty thap | Motor yeu/cham hon |
-| Duty cao | Motor manh/nhanh hon |
-| IN1/IN2 | Chon huong quay hoac che do dung |
+| `ARR` | Định chu kỳ/tần số PWM |
+| `CCR1/Pulse` | Định duty, tức thời gian ENA được bật |
+| Duty thấp | Motor yếu/chậm hơn |
+| Duty cao | Motor mạnh/nhanh hơn |
+| IN1/IN2 | Chọn hướng quay hoặc chế độ dừng |
+
+## 9. Đủ để làm bản open-loop cơ bản chưa?
+
+Có. Nếu tạm bỏ encoder, OLED, HC-SR04, và closed-loop control, kiến thức hiện tại đã đủ để làm bản:
+
+```text
+Chiết áp -> ADC PA0
+ADC value -> code map sang Pulse/CCR1
+TIM1 PWM PA8 -> L298N ENA
+GPIO PB12/PB13 -> L298N IN1/IN2
+L298N -> motor GA37
+```
+
+Cần học thêm ngay trước khi code HAL:
+
+| Mảng | Dùng để làm gì |
+| --- | --- |
+| `GPIO Output` | Set `PB12/PB13` để chọn hướng hoặc dừng motor |
+| HAL flow | Start PWM, đọc ADC, map ADC sang Pulse, ghi Pulse vào `CCR1`, set GPIO hướng |
+
+Tạm nhớ:
+
+```text
+ADC đọc ga
+PWM điều khiển độ mạnh
+GPIO điều khiển hướng
+L298N cấp dòng cho motor
+```
+
+## 10. Quy trình HAL nhìn từ xa
+
+Biết C là đủ để hiểu logic, nhưng STM32 HAL dùng các hàm thư viện dạng `HAL_...` để thao tác với peripheral. Trước khi dùng PWM hoặc ADC, peripheral phải được cấu hình và init.
+
+Luồng tổng quát:
+
+```text
+CubeMX config -> MX init -> HAL start -> read ADC -> map value -> write CCR1
+```
+
+| Bước | Ý nghĩa |
+| --- | --- |
+| CubeMX config | Chọn chân và mode: `PA0 = ADC1_IN0`, `PA8 = TIM1_CH1`, `PB12/PB13 = GPIO Output` |
+| `MX_..._Init` | Hàm init do CubeMX sinh ra để cấu hình ADC, timer PWM, GPIO |
+| `HAL_..._Start` | Bật peripheral bắt đầu chạy |
+| Vòng lặp chính | Đọc ADC, map sang Pulse, ghi vào `CCR1`, set hướng motor |
+
+Tư duy quan trọng:
+
+```text
+Init = chuẩn bị phần cứng
+Start = cho peripheral chạy
+Loop = đọc input và cập nhật output
+```
+
+## 11. CubeMX pinout đã confirm
+
+Pinout hiện tại trong CubeMX đã đúng cho bản open-loop:
+
+| Chức năng | Cấu hình CubeMX |
+| --- | --- |
+| Chiết áp | `PA0 = ADC1_IN0` |
+| PWM motor | `PA8 = TIM1_CH1` |
+| L298N IN1 | `PB12 = GPIO_Output` |
+| L298N IN2 | `PB13 = GPIO_Output` |
+| Encoder C1 | `PA6 = TIM3_CH1`, để học sau |
+| Encoder C2 | `PA7 = TIM3_CH2`, để học sau |
+
+Bước tiếp theo không phải thêm chân mới, mà là kiểm tra cấu hình parameter:
+
+```text
+Clock = 72 MHz
+TIM1 PSC = 71
+TIM1 ARR = 99
+TIM1 Pulse = 0
+ADC1 channel = IN0
+PB12/PB13 output mode = push-pull
+```
+
+## 12. Nếu CubeMX đang hiện SYSCLK = 8 MHz
+
+Khi `SYSCLK = 8 MHz`, thường là CubeMX đang dùng `HSI` nội. Với Blue Pill muốn đạt `72 MHz`, cần bật clock ngoài `HSE` trước:
+
+```text
+System Core > RCC
+HSE = Crystal/Ceramic Resonator
+```
+
+Sau đó trong Clock Configuration:
+
+```text
+HSE input = 8 MHz
+PLL source = HSE
+PLLMul = x9
+System Clock Mux = PLLCLK
+SYSCLK = 72 MHz
+```
+
+Prescaler nên dùng:
+
+```text
+AHB  = /1
+APB1 = /2
+APB2 = /1
+ADC  = /6
+```
+
+Lý do `APB1 = /2`: bus APB1 của STM32F103 chỉ tối đa `36 MHz`.
+
+## 13. Clock configuration đã confirm đúng
+
+Ảnh Clock Configuration hiện tại đã đúng cho project:
+
+```text
+SYSCLK = 72 MHz
+AHB    = /1  -> HCLK = 72 MHz
+APB1   = /2  -> PCLK1 = 36 MHz
+APB2   = /1  -> PCLK2 = 72 MHz
+ADC    = /6  -> ADC clock = 12 MHz
+```
+
+Chưa cần đào sâu bus clock ngay. Tạm nhớ: đây là bộ chia an toàn/phù hợp cho STM32F103 chạy `72 MHz`; đặc biệt APB1 không được vượt `36 MHz`.
