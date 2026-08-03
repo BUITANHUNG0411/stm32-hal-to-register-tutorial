@@ -10,7 +10,7 @@ Bản web trực quan nằm ở: [index.html](index.html)
 
 ## Trạng Thái Học Hiện Tại
 
-Kiến thức hiện tại đã đủ để làm bản open-loop cơ bản:
+Kiến thức và firmware hiện tại đã hoàn thành bản open-loop cơ bản; phần cứng đã được test với chức năng vặn chiết áp để thay đổi tốc độ motor:
 
 ```text
 Chiết áp -> ADC PA0
@@ -20,7 +20,7 @@ GPIO PB12/PB13 -> L298N IN1/IN2
 L298N -> motor GA37
 ```
 
-Tạm bỏ qua encoder, OLED, HC-SR04, và closed-loop control. Trước khi code HAL, phần còn thiếu nhẹ là `GPIO Output` cho `IN1/IN2` và flow tổng thể: start PWM, đọc ADC, map ADC sang Pulse, ghi Pulse vào `CCR1`, rồi set GPIO hướng.
+Tạm bỏ qua encoder, OLED, HC-SR04, và closed-loop control. Bước hiện tại không phải thêm chức năng firmware: thu thập test evidence và mô tả kiến trúc bằng project tree, runtime/module call flow, cùng hardware signal flow cho portfolio.
 
 ## Quy Trình HAL Cần Nắm Trước Khi Code
 
