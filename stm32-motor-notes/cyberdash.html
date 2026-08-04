@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Sổ tay CyberDash track: Joystick analog events, dead zone, debounce, UART protocol gửi lệnh từ STM32 tới Qt/CyberDash.">
+  <title>CyberDash — STM32 Motor Workbook</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Mục lục CyberDash">
+      <a class="sidebar-back" href="index.html">← Trang chủ</a>
+      <a class="brand" href="#joystick-events">CyberDash</a>
+      <p class="sidebar-copy">Joystick → Events → UART → Qt.</p>
+
+      <nav class="toc">
+        <p class="toc-label">Học theo thứ tự</p>
+        <a href="#joystick-events"><span>01</span><b>Joystick events</b></a>
+        <a href="#uart-basics"><span>02</span><b>UART basics</b></a>
+
+        <p class="toc-label">Tra cứu nhanh</p>
+        <a href="#ref-uart"><span>R1</span><b>UART reference</b></a>
+      </nav>
+
+      <div class="sidebar-status">
+        <span class="status-dot" style="background:#6d28d9;box-shadow:0 0 0 4px #f3effe;"></span>
+        <div>
+          <strong>Track</strong>
+          <small>Joystick → CyberDash</small>
+        </div>
+      </div>
+    </aside>
+
+    <main class="content" id="top">
+      <header class="topbar">
+        <div>
+          <p class="kicker" style="color:#6d28d9;">CYBERDASH / JOYSTICK EXTENSION</p>
+          <h1>CyberDash Track</h1>
+          <p class="lede">Biến tín hiệu joystick vật lý thành lệnh UI rời rạc và gửi qua UART tới Qt/CyberDash.</p>
+        </div>
+        <div class="topbar-meta">
+          <span class="tag" style="border-color:#c4b5fd;background:#f3effe;color:#6d28d9;">JOYSTICK</span>
+          <span class="tag">UART / Qt</span>
+        </div>
+      </header>
+
+      <!-- ── Section 01: Joystick events ──────────────────── -->
+      <section class="section" id="joystick-events">
+        <div class="section-heading">
+          <div><span class="section-index" style="color:#6d28d9;">01</span><h2>Joystick: Analog to Events</h2></div>
+          <p>Biến tín hiệu vật lý liên tục thành lệnh UI rời rạc trước khi học UART.</p>
+        </div>
+
+        <!-- 1.1 Vì sao không gửi raw ADC -->
+        <div class="lesson-block">
+          <h3>1.1 — Vì sao không gửi raw ADC?</h3>
+          <div class="two-column">
+            <div>
+              <p>`VRx` và `VRy` là điện áp analog: gần một đầu là `0`, gần giữa là khoảng `2048`, gần đầu kia là `4095` khi ADC 12-bit dùng 3.3 V. Khi cần gạt đứng yên, giá trị vẫn có thể dao động nhẹ; nếu gửi mọi mẫu `0..4095`, Qt phải tự đặt ngưỡng, lọc nhiễu và nhận rất nhiều dữ liệu không mang ý nghĩa UI.</p>
+            </div>
+            <div>
+              <p>STM32 đọc ADC, lọc theo dead zone/ngưỡng, nhận ra một thao tác có ý nghĩa và phát event như <code>NEXT</code>. Qt chỉ nhận event rồi gọi hành động nhạc tương ứng. Như vậy Qt không phụ thuộc vào điện áp, ADC resolution hay joystick cụ thể.</p>
+              <p>Trong firmware module: file <code>.h</code> công bố interface/kiểu event; file <code>.c</code> mới giữ điều kiện, state và quyết định phát event.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1.2 Quy tắc phiên bản đầu & Dead zone -->
+        <div class="lesson-block">
+          <h3>1.2 — Quy tắc phiên bản đầu &amp; Dead zone</h3>
+          <div class="equation">CENTER → một hướng → một event → CENTER</div>
+          <p>Sau khi phát <code>NEXT</code>, STM32 không chờ event mới; nó chờ cần gạt trở về vùng giữa. Khi còn giữ sang phải, không phát lại. Khi đã về giữa, hệ thống được "arm" để lần gạt tiếp theo phát đúng một event.</p>
+          <p><strong>Dead zone:</strong> Không coi đúng một giá trị như `2048` là CENTER. Ta định nghĩa một khoảng quanh giữa là CENTER để dao động nhỏ không thành thao tác. Các ngưỡng cụ thể phải đo trên joystick thật rồi mới chốt.</p>
+          <p><strong>Gạt chéo:</strong> Phiên bản đầu chỉ chấp nhận một trong bốn hướng chính: nếu cả hai trục cùng vượt ngưỡng thì không phát event và yêu cầu trở về CENTER. Quy tắc này loại bỏ lệnh kép như vừa <code>NEXT</code> vừa <code>VOLUME_UP</code>.</p>
+          <div class="checkpoint"><b>Checkpoint</b><span>Chỉ khi gạt một hướng và cần về CENTER mới "arm" lại — không phát liên tục khi giữ.</span></div>
+        </div>
+
+        <!-- 1.3 Nút SW & Debounce -->
+        <div class="lesson-block">
+          <h3>1.3 — Nút nhấn SW &amp; Debounce</h3>
+          <div class="two-column">
+            <div>
+              <p><strong>Nút SW:</strong> `SW` là công tắc số, STM32 đọc bằng GPIO input thay vì ADC. Với phần lớn module joystick, cấu hình input pull-up: thả = HIGH, nhấn = LOW. Một lần chuyển thả → nhấn tạo event <code>PLAY_PAUSE</code>.</p>
+            </div>
+            <div>
+              <p><strong>Debounce:</strong> Tiếp điểm cơ khí không đổi trạng thái sạch tuyệt đối khi nhấn: trong vài mili giây nó có thể nhảy HIGH/LOW nhiều lần. Debounce chỉ công nhận lần chuyển sang LOW đầu tiên, rồi bỏ qua các thay đổi rất gần sau đó.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1.4 LED test trước UART -->
+        <div class="lesson-block">
+          <h3>1.4 — LED test trước UART</h3>
+          <p>LED sáng liên tục khi giữ hướng chỉ chứng minh <em>trạng thái vật lý</em> của joystick. Để chứng minh <em>event</em> (một gạt chỉ một lệnh), LED phải chớp một lần rồi tắt, dù cần gạt vẫn đang được giữ. Hai phép test đều hữu ích, nhưng event test mới kiểm tra quy tắc trước khi đưa UART/Qt vào.</p>
+          <div class="equation">VRx / VRy / SW → joystick_input → JoystickEvent → event_indicator (LED) → uart_protocol (later) → CyberDash</div>
+          <p><code>joystick_input</code> là nơi đọc ADC/GPIO và quyết định event. <code>event_indicator</code> chỉ nhận event rồi chớp LED để test. Khi LED pass, <code>uart_protocol</code> sẽ nhận chính event đó để gửi sang PC. Motor modules và <code>app_motor_control</code> giữ nguyên trách nhiệm; <code>main.c</code> chỉ điều phối các application module.</p>
+          <div class="checkpoint"><b>Checkpoint</b><span>Không nối trực tiếp joystick với UART. Event là ranh giới chung giữa test LED hiện tại và UART/CyberDash về sau.</span></div>
+        </div>
+
+        <!-- 1.5 Hiệu chuẩn hai trục -->
+        <div class="lesson-block">
+          <h3>1.5 — Hiệu chuẩn hai trục ADC</h3>
+          <p>Datasheet không cho raw ADC chính xác của joystick đang cắm trên bàn. Giá trị ngưỡng phải lấy từ firmware đọc ADC trên board thật. VRx và VRy là hai cơ cấu cơ khí riêng — không dùng chung một bộ ngưỡng.</p>
+          <table class="data-table"><thead><tr><th>Vùng đo</th><th>Mục đích</th><th>Ví dụ minh họa, không phải giá trị cố định</th></tr></thead><tbody>
+            <tr><td>Center</td><td>Đặt mốc vùng chết</td><td>≈ 2050</td></tr>
+            <tr><td>Min</td><td>Biết biên phía thấp</td><td>≈ 120</td></tr>
+            <tr><td>Max</td><td>Biết biên phía cao</td><td>≈ 3980</td></tr>
+          </tbody></table>
+          <p>Đồng thời ghi lại <strong>biên nào ứng với hướng vật lý nào</strong>: không mặc định ADC thấp luôn là trái hay ADC cao luôn là lên. Test vật lý mới chốt mapping <code>PREVIOUS/NEXT/VOLUME_UP/VOLUME_DOWN</code>.</p>
+          <p><strong>Ví dụ cách dùng số đo:</strong> nếu CENTER ≈ 2050, có thể bắt đầu coi 1800..2300 là vùng CENTER; chỉ phát hướng khi giá trị đi xa hơn, chẳng hạn dưới 1300 hoặc trên 2800.</p>
+          <div class="checkpoint"><b>Checkpoint</b><span>Hiệu chuẩn không phải map 0..4095 sang tốc độ. Nó đo vị trí thực để đặt dead zone và ngưỡng event tin cậy.</span></div>
+        </div>
+      </section>
+
+      <!-- ── Section 02: UART basics ───────────────────────── -->
+      <section class="section" id="uart-basics">
+        <div class="section-heading">
+          <div><span class="section-index" style="color:#6d28d9;">02</span><h2>UART: Event tới CyberDash</h2></div>
+          <p>UART là đường nối nối tiếp giữa Blue Pill và USB-to-TTL trên PC; nó không thay thế logic joystick.</p>
+        </div>
+        <div class="two-column">
+          <div class="lesson-block"><h3>Ba dây tín hiệu cần hiểu</h3><table class="data-table"><tbody><tr><td>STM32 TX</td><td>→</td><td>USB-to-TTL RXD</td></tr><tr><td>STM32 RX</td><td>←</td><td>USB-to-TTL TXD</td></tr><tr><td>GND</td><td>↔</td><td>GND chung</td></tr></tbody></table><p>TX là nơi một thiết bị phát dữ liệu; RX là nơi thiết bị kia nhận, nên hai dây phải nối chéo. Mức logic phía Blue Pill phải là 3.3 V.</p></div>
+          <div class="lesson-block"><h3>Cùng thông số hai đầu</h3><p>CyberDash hiện quy định USB-TTL UART là <strong>115200 baud, 8 data bits, no parity, 1 stop bit, no flow control</strong> (115200 8N1). Hai đầu khác baud/parity/stop bit sẽ giải mã sai hoặc tạo ký tự rác.</p><p><code>QSerialPort</code> trên Qt mở cổng USB-to-TTL; STM32 gửi một event có ý nghĩa, không stream raw ADC.</p></div>
+        </div>
+        <div class="lesson-block"><h3>Frame và ranh giới protocol</h3><p>UART chỉ truyền byte. Protocol quyết định byte nào tạo thành một message hoàn chỉnh; bản beginner nên dùng từng dòng text có điểm kết thúc rõ ràng. CyberDash hiện chỉ parse telemetry <code>TEL,...</code>, vì vậy event joystick sau này cần một loại frame riêng và parser mở rộng có kiểm soát — không giả làm telemetry motor.</p><div class="checkpoint"><b>Checkpoint</b><span>Joystick tạo event; UART mang event; Qt/CyberDash diễn giải event. Ba trách nhiệm khác nhau.</span></div></div>
+      </section>
+
+      <!-- ── Reference: UART quick lookup ─────────────────── -->
+      <section class="section reference-section" id="ref-uart">
+        <div class="section-heading"><div><span class="section-index" style="color:#6d28d9;">R1</span><h2>UART Reference</h2></div><p>Tra nhanh khi đang cấu hình CubeMX hoặc QSerialPort.</p></div>
+        <div class="reference-block"><h3>Thông số chuẩn</h3><div class="formula-list"><code>Baud: 115200</code><code>Data bits: 8</code><code>Parity: None</code><code>Stop bits: 1</code><code>Flow ctrl: None</code><code>Logic: 3.3 V</code></div></div>
+        <div class="reference-block"><h3>Wiring</h3><table class="data-table"><thead><tr><th>STM32</th><th>Chiều</th><th>USB-to-TTL</th></tr></thead><tbody><tr><td>TX (PA9)</td><td>→</td><td>RXD</td></tr><tr><td>RX (PA10)</td><td>←</td><td>TXD</td></tr><tr><td>GND</td><td>↔</td><td>GND</td></tr></tbody></table></div>
+        <div class="callout warning"><b>Lưu ý pin</b><span>Pin joystick và pin UART chưa chốt — phải kiểm tra file `.ioc` và conflict với motor/OLED/encoder plan trước khi quyết định. Không hard-code pin vào code trước khi đã xác nhận.</span></div>
+      </section>
+
+      <footer class="footer"><span>CyberDash — STM32 Motor Workbook</span><span>Static HTML / Vietnamese notes</span></footer>
+    </main>
+  </div>
+</body>
+</html>

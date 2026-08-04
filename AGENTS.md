@@ -2,19 +2,21 @@
 
 ## Project Shape
 
-This repository currently contains a static Vietnamese learning notebook at `stm32-motor-notes/`.
+This repository contains a static Vietnamese learning notebook at `stm32-motor-notes/`. It is split into three pages after the 2026-08-04 refactor:
 
 Primary files:
 
-- `stm32-motor-notes/README.md`: entry point, hardware context, learning order, and core formulas.
-- `stm32-motor-notes/index.html`: main readable notebook. Treat this as the primary learning surface and keep it updated after each new concept is taught.
-- `stm32-motor-notes/styles.css`: styling for the static notebook. No JavaScript is currently used.
+- `stm32-motor-notes/index.html`: **Landing page** — hardware dashboard (MCU/motor/driver/PWM specs), project status badges, and two track cards linking to motor.html and cyberdash.html. Open this first.
+- `stm32-motor-notes/motor.html`: **Motor Control track** — Timer, PWM, ADC, L298N, HAL modules, Reference desk (pin map, formula sheet, project views), Build & flash, Học sau, Markdown archive.
+- `stm32-motor-notes/cyberdash.html`: **CyberDash track** — Joystick analog events (5 sub-sections: raw ADC rationale, dead zone/rules, SW button/debounce, LED test, two-axis calibration), UART basics, UART reference desk.
+- `stm32-motor-notes/styles.css`: styling for all three pages. Shared, do not break existing classes. New classes added: `.track-card`, `.track-cards`, `.track-card.motor`, `.track-card.cyberdash`, `.track-arrow`, `.sidebar-back`.
 - `stm32-motor-notes/notes/01-timer.md`: secondary source/archive for timer counter, PSC, `f_CNT`, tick time, ARR, inclusive counting.
 - `stm32-motor-notes/notes/02-pwm.md`: secondary source/archive for PWM period/frequency, `CCR1/Pulse`, duty cycle, waveform examples.
 - `stm32-motor-notes/notes/03-led-control.md`: secondary source/archive for PWM as perceived LED brightness.
 - `stm32-motor-notes/notes/04-dc-motor-control.md`: secondary source/archive for L298N ENA PWM, IN1/IN2 direction, motor power and common GND.
 - `docs/superpowers/specs/2026-07-31-stm32-timer-pwm-notebook-design.md`: original design spec for the notebook.
 - `docs/superpowers/plans/2026-07-31-stm32-timer-pwm-notebook.md`: implementation plan used to create the first notebook version.
+- `docs/superpowers/specs/2026-08-04-website-refactor-design.md`: design spec for the 3-file refactor.
 
 ## Content Maintenance Rule
 
@@ -34,6 +36,18 @@ Rules:
 - Prefer documentation surfaces over presentation cards: compact tables, equations, status labels, callouts, checklists, and code blocks. Keep shadows and decorative spacing restrained.
 - Keep `/notes/*.md` as source/archive links only. The learner should not need to open Markdown to understand the lesson.
 - When teaching HAL/C firmware workflow and the learner answers correctly, immediately add the confirmed knowledge to `stm32-motor-notes/index.html`.
+
+### CyberDash Joystick Learning Track
+
+When the learner is studying the joystick-to-CyberDash extension, add each confirmed theory concept to the primary web notebook in the same turn. Keep this track theory-first: do not write STM32 or Qt implementation code unless the learner explicitly asks to begin coding.
+
+Teach this learner with connected explanations, not rapid-fire micro-quizzes: link physical signal → module responsibility → observable LED/UART test → later Qt effect. At natural checkpoints, ask one meaningful question and wait. “Code guidance” means naming module boundaries, data flow, state/algorithm pseudocode, and which existing files to read; never provide a complete firmware implementation unless explicitly requested.
+
+- The target is one vehicle system and one STM32 firmware, organised as small modules in `Core/Inc` and `Core/Src`; it is not a separate motor firmware.
+- Teach and confirm the boundary in this order: analog joystick axes → discrete semantic events → button input/debounce → UART framing → Qt/CyberDash event ownership.
+- The initial semantic events are `PREVIOUS`, `NEXT`, `VOLUME_DOWN`, `VOLUME_UP`, and `PLAY_PAUSE`; the first interaction rule is `CENTER → direction → one event → CENTER`.
+- Do not silently allocate joystick or UART pins. Inspect the actual `.ioc`, explain any conflict with the fixed motor/OLED/encoder plan, and ask the learner before altering the pin plan.
+- Keep OLED work and PC-to-STM32 display state out of scope until joystick-to-Qt input is understood and tested.
 
 The HTML/CSS visual contract:
 
